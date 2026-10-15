@@ -1,0 +1,122 @@
+; Synaptotagmin-1 C2A, 92 replicas, 100 ps frames, 14 Oct 2026
+; Experimental: predictive cohesion as the optimisation objective.
+;
+; Use:  sbatch --export=ALL,PARAMS=pdukit/hpc/slurm/params/syt_c2a_cohesion.ppf pdukit/hpc/slurm/submit_cog2_synaptotagmin.slurm
+; Every setting is explicit so that the run does not depend on defaults.
+; Command-line options override this file (pdu run -p FILE ...).
+
+; ---- files and general options ----
+seed = 0
+
+; ---- MD data ----
+frames         = 0  ; first N frames per replica (0 = all)
+stride         = 1
+rse-cutoff     = 15.0
+rse-components = 8
+min-seq-sep    = 2
+contact-cutoff = 8.0
+pair-features  = 0  ; add pair-owned contact-distance features (Stage 4)
+pair-cutoff    = 8.0
+
+; ---- estimator ----
+lag        = 5
+unit-dim   = 8
+env-dim    = 20
+ridge      = 0.01
+n-null     = 128
+shift-mode = auto
+backend    = flux
+combine    = max
+cond-unit  = full  ; unit's present subtracted whole (COG 2.1) or as unit_dim slow ...
+cond-env   = full  ; environment's present subtracted whole ('full'), as N slow modes ...
+
+; ---- calibration ----
+sizes            = 2-120  ; calibration sizes, e.g.
+target-rel-width = 0.03
+min-supports     = 40
+max-supports     = 300
+batch-supports   = 32  ; calibration supports scored per batch
+calibrate-only   = 0  ; stop after the calibration (to check thetas, the baseline and the ...
+
+; ---- discovery ----
+n-holdout                = 0  ; hold out the last N replicas (0 = discover on all);
+per-replica-check        = 0  ; score the units on every replica separately, with that replica's ...
+no-center-replicas       = 0  ; keep each replica's mean (v1.0 behaviour);
+highpass-before-features = 1  ; apply --highpass-window to the raw neighbour distances BEFORE each ...
+fit                      = 1  ; remove overall rotation and translation (Kabsch) before building ...
+calibrate-coarse         = 8  ; calibrate only ~N sizes spread over the range and interpolate the ...
+skip-frames              = 0  ; drop the first N frames of every replica
+highpass-window          = 100  ; remove a running mean of this many frames within every replica (0 ...
+no-null-calibration      = 1  ; skip the highpass-window scan before discovery
+null-cal-windows         = auto  ; comma list of windows (frames) to scan;
+null-cal-n-windows       = 6
+null-cal-sizes           = 3,10
+null-cal-supports        = 48
+null-cal-n-null          = 32
+null-cal-target          = 0.06  ; largest acceptable null threshold (theta_in and theta_out);
+seeding                  = random  ; 'random' = N residues drawn at random (dynamics only);
+search-graph             = predictive  ; graph used everywhere a neighbourhood is needed (growth, round 2, ...
+baseline                 = graph  ; comparison regions for the cost baseline:
+graph-k                  = 5  ; strongest predictive partners kept per residue
+graph-null-shifts        = 16
+rho-min                  = 0.0  ; minimum channel strength:
+rho-scan                 =   ; comma list of data fractions (e.g.
+rho-scan-us              = 0  ; --rho-scan values are amounts of data in us (built from equal ...
+block-check              = 0  ; score the final units on every equal-length block (see --block-us) ...
+block-us                 = 1.0  ; block length in us (MD data)
+block-frames             = 0  ; block length in frames (planted data;
+rho-scan-null            = 32  ; shifts per subset in the rho scan
+faces                    = 0  ; cores and faces:
+face-delta               = 0.0  ; face candidate if cost(unit) - cost(unit without the residue) >= ...
+face-balance             = 0.8  ; coupling to the second unit / coupling to its own
+no-ledger                = 0  ; do not record the per-residue ledger
+no-ledger-loo            = 0  ; ledger without leave-one-out scores (faster)
+resolve                  = 1  ; second round for residues in groups with cost > 0:
+resolve-margin           = 0.1  ; improvement in cost (channels) needed to accept a new unit or a join
+resolve-seeds            = 12
+stability                = 1  ; after round 2:
+stab-cycles              = -1  ; kick cycles per unit;
+stab-patience            = 50  ; stop after this many cycles in a row that do not change the unit's ...
+stab-kmax                = 3  ; each kick changes 1..kmax residues
+stab-margin              = 0.1  ; a change is accepted only if it lowers the cost by more than this ...
+stab-null                = 20  ; random regions per size put through the same descent (0 = none)
+stab-steps               = 200  ; maximum descent steps
+stab-protect             = direction  ; direction:
+stab-protect-alpha       = 0.05  ; significance level of the driver/listener tests
+stab-objective           = cohesion  ; channels (default, COG 2.1 stable):
+grow-objective           = cohesion  ; channels (default, COG 2.1 stable):
+cohesion-margin          = auto  ; 'auto':
+cohesion-boot            = 20  ; bootstrap resamples for the cohesion noise margin
+cohesion-blocks          = 20  ; at least this many blocks (whole replicas if there are enough, ...
+channel-shadow           = auto  ; report only:
+cohesion-baseline-n      = 200  ; random regions per size for the cohesion q95 baseline
+pdudef                   = 0  ; score units with Varun's PDU definition, linear estimators:
+pdudef-random            = 20  ; random sets per size for the Q null
+pdudef-shifts            = 32  ; time shifts used to set eta
+pdudef-frames            = 2000  ; frames subsampled for the box-counting estimate
+null-cal-tol             = 0.15  ; 'auto' window = the smallest window whose null threshold is within ...
+null-cal-max-replicas    = 20  ; scan on at most this many replicas (evenly spaced)
+frame-ps                 = 100.0  ; time per frame in ps, for the logs only
+batched                  = auto  ; score candidates in batches on the GPU engine (auto:
+env-basis                = exact  ; 'ritz' = environment slow basis from the global slow modes + block ...
+no-feature-cache         = 0
+no-replica-overlap       = 0  ; skip the tICA check of whether replicas visit the same states
+dec-seeds                = 32
+dec-iters                = 8
+max-size                 = 120
+min-size                 = 3
+max-unit                 = 120
+boundary-tol             = 0.15
+merge-jaccard            = 0.5
+merge-mode               = reearn  ; reearn (13 Oct 2026):
+add-gate                 = ratio  ; ratio:
+size-penalty             = 0.0
+n-controls               = 8
+no-cohesion-split        = 0  ; do not split units whose halves are independent
+no-keep-best             = 0  ; return the last assignment iteration, as COG v1.0 did, instead of ...
+
+; ---- verification ----
+verify-lags  = none
+verify-null  = 32
+compare-cog1 = 0
+cog1-null    = 20  ; shifts for the COG v1.0 comparison workspace

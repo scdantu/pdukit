@@ -1,0 +1,69 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pdukit"
+version = "1.0.0a1"
+description = "COG: detect protein dynamical units (PDUs) from molecular dynamics trajectories"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "GPL-3.0-or-later" }
+authors = [{ name = "Sarath Chandra Dantu" }]
+keywords = ["molecular dynamics", "protein dynamics", "allostery", "Koopman", "tICA"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+    "Topic :: Scientific/Engineering :: Physics",
+]
+dependencies = [
+    "numpy>=1.24",
+    "scipy>=1.10",
+    "threadpoolctl>=3.1",
+]
+
+[project.optional-dependencies]
+gpu = ["torch>=2.3"]                    # batched GPU scoring (cog2_gpu); CPU path needs only numpy
+xtc = ["MDAnalysis>=2.5"]               # read XTC/DCD trajectories (cog2_run --xtc)
+mdcath = ["h5py>=3.9", "fsspec", "aiohttp"]   # mdCATH .h5 input
+dev = ["pytest>=7", "ruff"]
+
+[project.scripts]
+pdu = "pdukit.cli:main"
+# older names, kept as aliases
+pdu-cog2 = "pdukit.lib.pdu.cog2_run:main"
+pdu-cog2-fasttest = "pdukit.lib.pdu.cog2_fasttest:main"
+pdu-cog2-summarise = "pdukit.lib.pdu.cog2_summarise:main"
+
+[tool.setuptools.packages.find]
+include = ["pdukit*"]
+
+[tool.pytest.ini_options]
+testpaths = ["pdukit/lib/pdu/tests"]
+addopts = "-ra"
+
+[tool.ruff]
+line-length = 79
+
+[tool.ruff.lint]
+# PEP 8 (E, W, N), PEP 257 (D), pyflakes (F), sorted imports (I)
+select = ["E", "W", "F", "N", "D", "I"]
+ignore = [
+    "N803",  # argument names follow the maths (C, A, S, E, ...)
+    "N806",  # local names follow the maths
+    "D205",  # legacy multi-line summaries, being tidied module by module
+    "D203",
+    "D213",
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "pep257"
+
+[tool.ruff.lint.per-file-ignores]
+"**/tests/*" = ["D"]
+
+[project.urls]
+Homepage = "https://github.com/scdantu/pdu"
+Issues = "https://github.com/scdantu/pdu/issues"

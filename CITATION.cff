@@ -1,0 +1,11 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "pdu: COG 2.1 detection of protein dynamical units from molecular dynamics"
+version: 1.0.0-alpha.1
+date-released: 2026-10-15
+license: GPL-3.0-or-later
+authors:
+  - family-names: Dantu
+    given-names: Sarath Chandra
+    affiliation: "Department of Computer Science, Brunel University London"
+repository-code: "https://github.com/scdantu/pdu"
