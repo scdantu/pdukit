@@ -24,7 +24,7 @@ See [`docs/METHODS.md`](docs/METHODS.md) for definitions, stages and outputs.
 ## Install
 
 ```bash
-git clone https://github.com/scdantu/pdu.git && cd pdu
+git clone https://github.com/scdantu/pdukit.git && cd pdukit
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"            # numpy, scipy, threadpoolctl + pytest
 pip install -e ".[xtc]"            # to read XTC/DCD trajectories (MDAnalysis)

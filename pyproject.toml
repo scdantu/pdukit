@@ -68,5 +68,5 @@ convention = "pep257"
 "**/tests/*" = ["D"]
 
 [project.urls]
-Homepage = "https://github.com/scdantu/pdu"
-Issues = "https://github.com/scdantu/pdu/issues"
+Homepage = "https://github.com/scdantu/pdukit"
+Issues = "https://github.com/scdantu/pdukit/issues"
