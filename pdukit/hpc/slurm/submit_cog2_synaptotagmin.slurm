@@ -10,7 +10,7 @@
 # set iVAMPnets used).  Every */hsynapto-protein-stride10.xtc under SYTDIR is
 # one replica.
 #
-#   sbatch --export=ALL,PARAMS=pdukit/hpc/slurm/params/syt_c2a_channels.ppf \
+#   sbatch --export=ALL,PARAMS=pdukit/params/syt_c2a_channels.ppf \
 #          submit_cog2_synaptotagmin.slurm
 #   sbatch --export=ALL,MAX_REPLICAS=10,MODE=calibrate ... # quick test on the
 #                                                          # first 10 replicas
@@ -41,7 +41,7 @@ _SUBMIT_REPO="$(git -C "${SLURM_SUBMIT_DIR:-$PWD}" rev-parse --show-toplevel 2>/
 CODEDIR="${CODEDIR:-${_SUBMIT_REPO:-$WORKINGDIR/pdu}}"
 VENV="${VENV:-$HOME/venvs/pdu}"
 
-PARAMS="${PARAMS:-$CODEDIR/pdukit/hpc/slurm/params/syt_c2a_channels.ppf}"
+PARAMS="${PARAMS:-$CODEDIR/pdukit/params/syt_c2a_channels.ppf}"
 case "$PARAMS" in /*) ;; *) PARAMS="${SLURM_SUBMIT_DIR:-$PWD}/$PARAMS" ;; esac
 [ -f "$PARAMS" ] || { echo "parameter file not found: $PARAMS" >&2; exit 1; }
 PRESET="$(basename "$PARAMS" .ppf)"

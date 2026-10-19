@@ -1,7 +1,7 @@
-; Synaptotagmin-1 C2A, 92 replicas, 100 ps frames, 14 Oct 2026
-; Channel optimisation: growth and MC on J; cohesion reported as a check.
+; T4 lysozyme, 13 replicas, 20 ps frames, 14 Oct 2026
+; Experimental: predictive cohesion as the optimisation objective.
 ;
-; Use:  sbatch --export=ALL,PARAMS=pdukit/hpc/slurm/params/syt_c2a_channels.ppf pdukit/hpc/slurm/submit_cog2_synaptotagmin.slurm
+; Use:  sbatch --array=0 --export=ALL,PARAMS=pdukit/params/t4l_cohesion.ppf pdukit/hpc/slurm/submit_cog2_lysozyme.slurm
 ; Every setting is explicit so that the run does not depend on defaults.
 ; Command-line options override this file (pdu run -p FILE ...).
 
@@ -19,7 +19,7 @@ pair-features  = 0  ; add pair-owned contact-distance features (Stage 4)
 pair-cutoff    = 8.0
 
 ; ---- estimator ----
-lag        = 5
+lag        = 25
 unit-dim   = 8
 env-dim    = 20
 ridge      = 0.01
@@ -46,7 +46,7 @@ highpass-before-features = 1  ; apply --highpass-window to the raw neighbour dis
 fit                      = 1  ; remove overall rotation and translation (Kabsch) before building ...
 calibrate-coarse         = 8  ; calibrate only ~N sizes spread over the range and interpolate the ...
 skip-frames              = 0  ; drop the first N frames of every replica
-highpass-window          = 100  ; remove a running mean of this many frames within every replica (0 ...
+highpass-window          = 500  ; remove a running mean of this many frames within every replica (0 ...
 no-null-calibration      = 1  ; skip the highpass-window scan before discovery
 null-cal-windows         = auto  ; comma list of windows (frames) to scan;
 null-cal-n-windows       = 6
@@ -76,15 +76,15 @@ resolve-margin           = 0.1  ; improvement in cost (channels) needed to accep
 resolve-seeds            = 12
 stability                = 1  ; after round 2:
 stab-cycles              = -1  ; kick cycles per unit;
-stab-patience            = 100  ; stop after this many cycles in a row that do not change the unit's ...
+stab-patience            = 50  ; stop after this many cycles in a row that do not change the unit's ...
 stab-kmax                = 3  ; each kick changes 1..kmax residues
 stab-margin              = 0.1  ; a change is accepted only if it lowers the cost by more than this ...
 stab-null                = 20  ; random regions per size put through the same descent (0 = none)
 stab-steps               = 200  ; maximum descent steps
 stab-protect             = direction  ; direction:
 stab-protect-alpha       = 0.05  ; significance level of the driver/listener tests
-stab-objective           = channels  ; channels (default, COG 2.1 stable):
-grow-objective           = channels  ; channels (default, COG 2.1 stable):
+stab-objective           = cohesion  ; channels (default, COG 2.1 stable):
+grow-objective           = cohesion  ; channels (default, COG 2.1 stable):
 cohesion-margin          = auto  ; 'auto':
 cohesion-boot            = 20  ; bootstrap resamples for the cohesion noise margin
 cohesion-blocks          = 20  ; at least this many blocks (whole replicas if there are enough, ...
@@ -96,7 +96,7 @@ pdudef-shifts            = 32  ; time shifts used to set eta
 pdudef-frames            = 2000  ; frames subsampled for the box-counting estimate
 null-cal-tol             = 0.15  ; 'auto' window = the smallest window whose null threshold is within ...
 null-cal-max-replicas    = 20  ; scan on at most this many replicas (evenly spaced)
-frame-ps                 = 100.0  ; time per frame in ps, for the logs only
+frame-ps                 = 20.0  ; time per frame in ps, for the logs only
 batched                  = auto  ; score candidates in batches on the GPU engine (auto:
 env-basis                = exact  ; 'ritz' = environment slow basis from the global slow modes + block ...
 no-feature-cache         = 0

@@ -40,6 +40,9 @@ pdu-cog2-summarise = "pdukit.lib.pdu.cog2_summarise:main"
 [tool.setuptools.packages.find]
 include = ["pdukit*"]
 
+[tool.setuptools.package-data]
+pdukit = ["params/*.ppf"]
+
 [tool.pytest.ini_options]
 testpaths = ["pdukit/lib/pdu/tests"]
 addopts = "-ra"

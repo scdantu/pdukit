@@ -1,7 +1,7 @@
 ; T4 lysozyme, 13 replicas, 20 ps frames, 14 Oct 2026
 ; Channel optimisation: growth and MC on J; cohesion reported as a check.
 ;
-; Use:  sbatch --array=0 --export=ALL,PARAMS=pdukit/hpc/slurm/params/t4l_channels.ppf pdukit/hpc/slurm/submit_cog2_lysozyme.slurm
+; Use:  sbatch --array=0 --export=ALL,PARAMS=pdukit/params/t4l_channels.ppf pdukit/hpc/slurm/submit_cog2_lysozyme.slurm
 ; Every setting is explicit so that the run does not depend on defaults.
 ; Command-line options override this file (pdu run -p FILE ...).
 

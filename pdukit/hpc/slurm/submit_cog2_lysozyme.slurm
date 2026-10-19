@@ -9,7 +9,7 @@
 
 # PDU on T4 lysozyme, one variant per array task (GA IV QV L99A).
 #
-#   sbatch --export=ALL,PARAMS=pdukit/hpc/slurm/params/t4l_channels.ppf \
+#   sbatch --export=ALL,PARAMS=pdukit/params/t4l_channels.ppf \
 #          submit_cog2_lysozyme.slurm                  # all four variants
 #   sbatch --array=0 ... submit_cog2_lysozyme.slurm    # GA only
 #
@@ -43,7 +43,7 @@ _SUBMIT_REPO="$(git -C "${SLURM_SUBMIT_DIR:-$PWD}" rev-parse --show-toplevel 2>/
 CODEDIR="${CODEDIR:-${_SUBMIT_REPO:-$WORKINGDIR/pdu}}"
 VENV="${VENV:-$HOME/venvs/pdu}"
 
-PARAMS="${PARAMS:-$CODEDIR/pdukit/hpc/slurm/params/t4l_channels.ppf}"
+PARAMS="${PARAMS:-$CODEDIR/pdukit/params/t4l_channels.ppf}"
 case "$PARAMS" in /*) ;; *) PARAMS="${SLURM_SUBMIT_DIR:-$PWD}/$PARAMS" ;; esac
 [ -f "$PARAMS" ] || { echo "parameter file not found: $PARAMS" >&2; exit 1; }
 PRESET="$(basename "$PARAMS" .ppf)"

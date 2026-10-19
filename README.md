@@ -46,7 +46,7 @@ pdu fasttest --out out/fast --designs base --configs dyn_r2_mc --seeds 0 --jobs 
 
 ```bash
 pdu run -f rep1.xtc rep2.xtc rep3.xtc -s protein.tpr \
-        -p pdukit/hpc/slurm/params/t4l_channels.ppf -o out/my_protein
+        -p pdukit/params/t4l_channels.ppf -o out/my_protein
 ```
 
 The command is `pdu <module>`: `run`, `bench` (planted system with a known answer), `check`
@@ -74,7 +74,7 @@ suggestion, so a typo cannot fall back to a default silently. Every run writes i
 resolved settings to `pdu_out.ppf` in the output directory; `pdu run -p pdu_out.ppf` repeats it.
 `pdu check -p file.ppf -f ... -s ...` prints the resolved settings without running anything.
 
-The settings of the published runs are in `pdukit/hpc/slurm/params/` (`t4l_channels.ppf`,
+The settings of the published runs are in `pdukit/params/` (`t4l_channels.ppf`,
 `syt_c2a_channels.ppf`, and the experimental `*_cohesion.ppf`), used by the example Slurm
 scripts in `pdukit/hpc/slurm/`. Edit the data paths at the top of those scripts for your
 cluster; see [`pdukit/hpc/slurm/README.md`](pdukit/hpc/slurm/README.md).

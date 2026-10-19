@@ -16,9 +16,9 @@ to your cluster.
    the file); `MODE=calibrate` stops after calibration:
 
 ```bash
-sbatch --array=0 --export=ALL,PARAMS=pdukit/hpc/slurm/params/t4l_channels.ppf \
+sbatch --array=0 --export=ALL,PARAMS=pdukit/params/t4l_channels.ppf \
        pdukit/hpc/slurm/submit_cog2_lysozyme.slurm
-sbatch --export=ALL,PARAMS=pdukit/hpc/slurm/params/syt_c2a_channels.ppf,PDU_ARGS="--lag 10" \
+sbatch --export=ALL,PARAMS=pdukit/params/syt_c2a_channels.ppf,PDU_ARGS="--lag 10" \
        pdukit/hpc/slurm/submit_cog2_synaptotagmin.slurm
 ```
 

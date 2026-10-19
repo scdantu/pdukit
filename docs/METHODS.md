@@ -58,7 +58,7 @@ The ledger of per-residue labels is `cog2_ledger`; the CSV tables are written by
 | frame | 20 ps | 100 ps |
 | lag τ | 25 frames (500 ps) | 5 frames (500 ps) |
 | high-pass window | 500 frames (10 ns) | 100 frames (10 ns) |
-| params file | `pdukit/hpc/slurm/params/t4l_channels.ppf` | `.../syt_c2a_channels.ppf` |
+| params file | `pdukit/params/t4l_channels.ppf` | `.../syt_c2a_channels.ppf` |
 
 Common: unit_dim 8, env_dim 20, 128 null shifts, predictive graph k = 5, 32 random seeds,
 max unit 120, sizes 2–120, size penalty 0, minimum size 3, MC until convergence, margin 0.1.

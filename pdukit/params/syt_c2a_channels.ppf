@@ -1,7 +1,7 @@
 ; Synaptotagmin-1 C2A, 92 replicas, 100 ps frames, 14 Oct 2026
-; Experimental: predictive cohesion as the optimisation objective.
+; Channel optimisation: growth and MC on J; cohesion reported as a check.
 ;
-; Use:  sbatch --export=ALL,PARAMS=pdukit/hpc/slurm/params/syt_c2a_cohesion.ppf pdukit/hpc/slurm/submit_cog2_synaptotagmin.slurm
+; Use:  sbatch --export=ALL,PARAMS=pdukit/params/syt_c2a_channels.ppf pdukit/hpc/slurm/submit_cog2_synaptotagmin.slurm
 ; Every setting is explicit so that the run does not depend on defaults.
 ; Command-line options override this file (pdu run -p FILE ...).
 
@@ -76,15 +76,15 @@ resolve-margin           = 0.1  ; improvement in cost (channels) needed to accep
 resolve-seeds            = 12
 stability                = 1  ; after round 2:
 stab-cycles              = -1  ; kick cycles per unit;
-stab-patience            = 50  ; stop after this many cycles in a row that do not change the unit's ...
+stab-patience            = 100  ; stop after this many cycles in a row that do not change the unit's ...
 stab-kmax                = 3  ; each kick changes 1..kmax residues
 stab-margin              = 0.1  ; a change is accepted only if it lowers the cost by more than this ...
 stab-null                = 20  ; random regions per size put through the same descent (0 = none)
 stab-steps               = 200  ; maximum descent steps
 stab-protect             = direction  ; direction:
 stab-protect-alpha       = 0.05  ; significance level of the driver/listener tests
-stab-objective           = cohesion  ; channels (default, COG 2.1 stable):
-grow-objective           = cohesion  ; channels (default, COG 2.1 stable):
+stab-objective           = channels  ; channels (default, COG 2.1 stable):
+grow-objective           = channels  ; channels (default, COG 2.1 stable):
 cohesion-margin          = auto  ; 'auto':
 cohesion-boot            = 20  ; bootstrap resamples for the cohesion noise margin
 cohesion-blocks          = 20  ; at least this many blocks (whole replicas if there are enough, ...
