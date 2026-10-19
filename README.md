@@ -97,6 +97,11 @@ Results describe the sampled ensemble only: replicas that do not converge give
 sampling-dependent units. Channel counts saturate with long simulations unless an effect size is
 declared. Details and open issues are in `docs/METHODS.md`.
 
+## AI usage
+
+This software was prepared with the assistance of Claude Code (Anthropic); the scientific
+method and its interpretation are the authors' own. See `AI_USAGE.md` for details and verification.
+
 ## Citation
 
 If you use this code, please cite it (see `CITATION.cff`; a manuscript reference will be added
