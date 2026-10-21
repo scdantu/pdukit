@@ -26,8 +26,14 @@ preset, `pdukit/params/lag1ns.ppf`:
    a replica must be closer than frames of different replicas) and exits with
    status 2 if it fails.
 3. The speed of one step, and so how many replicas and steps are affordable.
-4. Whether other lags than 1 ns are supported (see `docs/propagation.md` in
-   the bioemu2 repository).
+4. Supported lags are 1 to 1000 ns (bioemu2 `docs/propagation.md`), so
+   1 ns is the shortest step the model offers; motions faster than 1 ns
+   cannot be resolved by a rollout.
 
-BioEmu2 output holds the backbone and C-beta only, and the propagated
-structures are model samples, not simulated dynamics.
+BioEmu-2 is an all-atom diffusion model (about 500M parameters, MODEL_CARD).
+Each propagation is one draw from a learned transition kernel
+p(x at t+lag | x at t); a rollout is a Markov chain of such draws, not
+integrated dynamics.  No kinetic validation is published, and sampling
+frequencies are not calibrated Boltzmann probabilities.  The bioemu2 package
+also has `simulate_trajectory()`, which chains steps and reuses the system
+embedding; the script here loops over `propagate` instead.
