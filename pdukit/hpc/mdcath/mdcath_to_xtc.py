@@ -68,6 +68,46 @@ def inspect(path: Path) -> None:
                 print(f"  {t}: replicates and frame counts {lens}")
 
 
+def protein_indices(top, n_atoms: int, elements) -> np.ndarray:
+    """Return the PDB atom indices that belong to the ``n_atoms`` coords.
+
+    The ``pdb`` dataset of an mdCATH file can hold the whole solvated system
+    while ``coords`` holds the protein atoms only.  Two candidates are tried:
+    the first ``n_atoms`` atoms, then mdtraj's protein selection.  A candidate
+    is accepted when it has ``n_atoms`` atoms and, if the file lists the
+    element of every atom, the elements agree.
+    """
+    cands = []
+    if top.n_atoms >= n_atoms:
+        cands.append(("first atoms", np.arange(n_atoms)))
+    cands.append(("protein selection", np.asarray(top.select("protein"))))
+    why = []
+    for name, idx in cands:
+        if len(idx) != n_atoms:
+            why.append(f"{name}: {len(idx)} atoms")
+            continue
+        if elements is not None and len(elements) == n_atoms:
+            sym = [top.atom(int(i)).element for i in idx]
+            sym = [e.symbol if e is not None else "" for e in sym]
+            bad = sum(a != b for a, b in zip(sym, elements))
+            if bad:
+                why.append(f"{name}: {bad} element mismatches")
+                continue
+        return idx
+    raise SystemExit(
+        f"cannot match the PDB ({top.n_atoms} atoms) to the {n_atoms} "
+        f"coordinate atoms ({'; '.join(why)}); see hdf5_layout.py"
+    )
+
+
+def file_elements(dg):
+    """Return the per-atom element symbols stored in the file, or None."""
+    if "element" not in dg:
+        return None
+    raw = dg["element"][()]
+    return [x.decode() if isinstance(x, bytes) else str(x) for x in raw]
+
+
 def convert(path: Path, domain: str, temperature: str, replicates: list[str],
             out: Path, dt_ns: float, heavy_only: bool) -> dict:
     """Write topology.pdb and one XTC per replicate; return a summary."""
@@ -79,28 +119,28 @@ def convert(path: Path, domain: str, temperature: str, replicates: list[str],
         dg = hl.domain_group(f, domain)
         pdb_text = hl.read_pdb_text(dg)
         if pdb_text is None:
-            raise SystemExit("no protein PDB text in the file; check "
+            raise SystemExit("no PDB text in the file; check "
                              "hdf5_layout.DS_PDB_ALIASES")
         (out / "full.pdb").write_text(pdb_text)
         top_full = md.load_pdb(str(out / "full.pdb")).topology
-        keep = np.array([a.index for a in top_full.atoms
-                         if not (heavy_only and a.element is not None
-                                 and a.element.symbol == "H")])
-        top = top_full.subset(keep)
         tg = hl.temperature_group(dg, temperature)
         avail = hl.list_replicates(tg)
-        times = None
+        n_coord = hl.replicate_group(tg, avail[0])["coords"].shape[1]
+        idx = protein_indices(top_full, n_coord, file_elements(dg))
+        top_prot = top_full.subset(idx)
+        keep = np.array([i for i, a in enumerate(top_prot.atoms)
+                         if not (heavy_only and a.element is not None
+                                 and a.element.symbol == "H")])
+        top = top_prot.subset(keep)
         frames = {}
         for r in replicates:
             if str(r) not in avail:
                 print(f"replicate {r} missing (have {avail}); skipped")
                 continue
             xyz = hl.read_coords(hl.replicate_group(tg, r))      # Angstrom
-            if xyz.shape[1] != top_full.n_atoms:
-                raise SystemExit(
-                    f"coords have {xyz.shape[1]} atoms but the PDB has "
-                    f"{top_full.n_atoms}; the atom order is not what the "
-                    "converter assumes (see hdf5_layout.py)")
+            if xyz.shape[1] != n_coord:
+                raise SystemExit(f"replicate {r} has {xyz.shape[1]} atoms, "
+                                 f"expected {n_coord}")
             xyz = xyz[:, keep, :] / 10.0                          # nm
             times = np.arange(xyz.shape[0]) * dt_ns * 1000.0      # ps
             traj = md.Trajectory(xyz.astype(np.float32), top, time=times)
@@ -113,7 +153,8 @@ def convert(path: Path, domain: str, temperature: str, replicates: list[str],
             "dt_ns": dt_ns, "frames_per_replicate": frames,
             "n_atoms": int(top.n_atoms),
             "n_residues": int(top.n_residues), "heavy_atoms_only": heavy_only,
-            "source": str(path)}
+            "pdb_atoms_in_file": int(top_full.n_atoms),
+            "coord_atoms_in_file": int(n_coord), "source": str(path)}
     (out / "conversion.json").write_text(json.dumps(info, indent=2))
     return info
 
