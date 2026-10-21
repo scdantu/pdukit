@@ -141,32 +141,43 @@ def ca_rmsd(a: np.ndarray, b: np.ndarray) -> float:
     return float(np.sqrt(((a @ r - b) ** 2).sum(1).mean()))
 
 
-def check_pairing(xyz: np.ndarray, top_pdb: Path, n_pairs: int = 20) -> dict:
+def check_pairing(xyz: np.ndarray, top_pdb: Path, n_null: int = 200) -> dict:
     """Test that replica i at step k+1 follows replica i at step k.
 
-    Uses C-alpha atoms.  The median RMSD of true successors must be clearly
-    smaller than that of successors of another replica.
+    Uses all C-alpha RMSDs between consecutive steps.  The statistic is the
+    mean RMSD between a replica and its own next frame.  Its null comes from
+    random permutations of the replicas at the next step (a scrambled output
+    order looks like that).  ``p`` is the fraction of permutations with a
+    statistic as small as the observed one.  For a rigid protein the effect
+    can be small; the slow-coordinate test in check_rollout.py is stronger.
     """
     import mdtraj as md
 
     top = md.load_topology(str(top_pdb))
     ca = top.select("name CA")
-    n_rep, n_steps = xyz.shape[0], xyz.shape[1]
-    if n_rep < 2 or n_steps < 2:
+    n_rep, n_frames = xyz.shape[0], xyz.shape[1]
+    if n_rep < 2 or n_frames < 2:
         return {"checked": False}
+    pos = xyz[:, :, ca, :]
+    r = np.empty((n_frames - 1, n_rep, n_rep))
+    for k in range(n_frames - 1):
+        for i in range(n_rep):
+            for j in range(n_rep):
+                r[k, i, j] = ca_rmsd(pos[i, k], pos[j, k + 1])
+    idx = np.arange(n_rep)
+    obs = float(r[:, idx, idx].mean())
     rng = np.random.default_rng(0)
-    same, other = [], []
-    for _ in range(n_pairs):
-        k = int(rng.integers(0, n_steps - 1))
-        i, j = rng.choice(n_rep, size=2, replace=False)
-        same.append(ca_rmsd(xyz[i, k][ca], xyz[i, k + 1][ca]))
-        other.append(ca_rmsd(xyz[i, k][ca], xyz[j, k + 1][ca]))
-    res = {"checked": True,
-           "median_rmsd_same_replica_nm": float(np.median(same)),
-           "median_rmsd_other_replica_nm": float(np.median(other))}
-    res["ok"] = res["median_rmsd_same_replica_nm"] < 0.8 * (
-        res["median_rmsd_other_replica_nm"])
-    return res
+    null = np.empty(n_null)
+    for m in range(n_null):
+        tot = 0.0
+        for k in range(n_frames - 1):
+            tot += r[k, idx, rng.permutation(n_rep)].mean()
+        null[m] = tot / (n_frames - 1)
+    p = float((1 + (null <= obs).sum()) / (1 + n_null))
+    return {"checked": True, "mean_rmsd_same_replica_nm": obs,
+            "mean_rmsd_permuted_nm": float(null.mean()),
+            "ratio": obs / float(null.mean()), "p": p, "ok": p < 0.05,
+            "n_pairs": int((n_frames - 1) * n_rep)}
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -206,11 +217,15 @@ def main(argv=None) -> int:
             "seconds": round(time.time() - t0, 1), "pairing_check": pairing}
     (out / "rollout.json").write_text(json.dumps(meta, indent=2))
     print(json.dumps(meta, indent=2))
-    if pairing.get("checked") and not pairing["ok"]:
-        print("PAIRING CHECK FAILED: output order does not follow the start "
-              "structures; the replicas are not trajectories.",
-              file=sys.stderr)
+    if pairing.get("checked") and pairing["p"] > 0.2:
+        print("PAIRING CHECK FAILED: no sign that frame k+1 follows frame k "
+              "of the same replica (p = %.2f); run check_rollout.py and do "
+              "not use these replicas as trajectories until it passes."
+              % pairing["p"], file=sys.stderr)
         return 2
+    if pairing.get("checked") and not pairing["ok"]:
+        print("pairing check weak (p = %.2f); see check_rollout.py"
+              % pairing["p"], file=sys.stderr)
     return 0
 
 

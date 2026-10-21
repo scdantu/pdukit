@@ -22,9 +22,12 @@ preset, `pdukit/params/lag1ns.ppf`:
    `propagate`, `save_frames`) follow the bioemu2 README.  If `propagate`
    does not accept its own output, use `ENGINE=cli`.
 2. The i-th structure written by a propagation is assumed to be the endpoint
-   of the i-th start structure.  The script checks this (consecutive frames of
-   a replica must be closer than frames of different replicas) and exits with
-   status 2 if it fails.
+   of the i-th start structure.  The script tests this on all frames (RMSD to the
+   next frame of the same replica against permuted replicas) and exits with
+   status 2 if there is no sign of pairing.  For a rigid protein that test is
+   weak, so run `python check_rollout.py OUTDIR` (no GPU needed): it tests the
+   lag-1 autocorrelation of the leading principal components against the
+   same permutation null, and gives the autocorrelations to compare with MD.
 3. The speed of one step, and so how many replicas and steps are affordable.
 4. Supported lags are 1 to 1000 ns (bioemu2 `docs/propagation.md`), so
    1 ns is the shortest step the model offers; motions faster than 1 ns
