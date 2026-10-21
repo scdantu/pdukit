@@ -43,20 +43,29 @@ def fetch(domain: str, cache: Path) -> Path:
 
 
 def inspect(path: Path) -> None:
-    """Print the tree of an HDF5 file down to the first replicate."""
+    """Print every key of the domain group and one replicate of one temp."""
     h5py = hl._require_h5py()
     with h5py.File(path, "r") as f:
-        def walk(g, ind=0, depth=0):
-            for k in list(g.keys())[:8]:
-                v = g[k]
-                kind = (f"group ({len(v.keys())} keys)" if hasattr(v, "keys")
-                        else f"dataset {v.shape} {v.dtype}")
-                print(f"{' ' * ind}{k}: {kind}")
-                if hasattr(v, "keys") and depth < 3:
-                    walk(v, ind + 2, depth + 1)
-        walk(f)
-        print("top-level attrs:", dict(f.attrs))
-    print(hl.verify_layout.__doc__ or "")
+        print("file attrs:", dict(f.attrs))
+        for dom in f.keys():
+            dg = f[dom]
+            print(f"{dom}: {len(dg.keys())} keys: {list(dg.keys())}")
+            for k, v in dg.items():
+                if hasattr(v, "keys"):
+                    continue
+                shape = getattr(v, "shape", None)
+                preview = ""
+                if shape == ():
+                    raw = v[()]
+                    raw = raw.decode() if isinstance(raw, bytes) else raw
+                    preview = repr(str(raw)[:70])
+                print(f"  {k}: dataset {shape} {v.dtype} {preview}")
+            temps = hl.list_temperatures(dg)
+            print("  temperatures:", temps)
+            for t in temps[:1]:
+                reps = hl.list_replicates(dg[t])
+                lens = {r: dg[t][r]["coords"].shape[0] for r in reps}
+                print(f"  {t}: replicates and frame counts {lens}")
 
 
 def convert(path: Path, domain: str, temperature: str, replicates: list[str],
@@ -71,7 +80,7 @@ def convert(path: Path, domain: str, temperature: str, replicates: list[str],
         pdb_text = hl.read_pdb_text(dg)
         if pdb_text is None:
             raise SystemExit("no protein PDB text in the file; check "
-                             "hdf5_layout.DS_PDB")
+                             "hdf5_layout.DS_PDB_ALIASES")
         (out / "full.pdb").write_text(pdb_text)
         top_full = md.load_pdb(str(out / "full.pdb")).topology
         keep = np.array([a.index for a in top_full.atoms

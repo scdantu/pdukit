@@ -15,12 +15,21 @@ Run::
 which dumps the real tree and tells you which of the assumptions below hold.
 If something differs, fix it HERE -- no other module hardcodes structure.
 
-Assumed layout
+Layout checked on a real file (1ztdA00, 2026-10-21): domain group at the top
+level; temperature groups "320", "348", "379", "413", "450"; replicate groups
+"0".."4" with coords (n_frames, n_atoms, 3), forces, dssp, rmsd, rmsf,
+gyrationRadius and box; 420-450 frames per replicate; domain-level datasets
+pdb, chain and element; file attribute layout = "mdcath-only-protein-v1.0".
+The frame spacing is still not stored in the file.
+
+Assumed layout (before checking; see the note above for what was confirmed)
 --------------
     /<domain_id>/                       e.g. "1a3dA00"
         attrs: numResidues, numProteinAtoms, numChains, ...
         z                  (numProteinAtoms,)   int  atomic numbers
-        pdbProteinAtoms    scalar string        PDB text of protein atoms
+        pdb                scalar string        PDB text of protein atoms
+                           (stored as "pdb"; "pdbProteinAtoms" was a guess)
+        chain, element     (numProteinAtoms,)   object
         <temperature>/     "320" "348" "379" "413" "450"  (string keys)
             <replicate>/   "0" "1" "2" "3" "4"            (string keys)
                 attrs: numFrames, (maybe) numResidues, numProteinAtoms
@@ -60,7 +69,8 @@ DS_RMSF = "rmsf"
 DS_RGYR = "gyrationRadius"
 
 DS_Z = "z"
-DS_PDB = "pdbProteinAtoms"
+DS_PDB = "pdb"  # verified on 1ztdA00, 2026-10-21 (older guess: pdbProteinAtoms)
+DS_PDB_ALIASES = ("pdb", "pdbProteinAtoms")
 
 ATTR_NUM_FRAMES = "numFrames"
 ATTR_NUM_RESIDUES = "numResidues"
@@ -155,9 +165,10 @@ def read_coords(rg, stride: int = 1, max_frames: int | None = None):
 
 def read_pdb_text(dg) -> str | None:
     """Return the PDB text of the protein atoms, or None."""
-    if DS_PDB not in dg:
+    key = next((k for k in DS_PDB_ALIASES if k in dg), None)
+    if key is None:
         return None
-    raw = dg[DS_PDB][()]
+    raw = dg[key][()]
     if isinstance(raw, bytes):
         return raw.decode("utf-8", errors="replace")
     if isinstance(raw, str):
