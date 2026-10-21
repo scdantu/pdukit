@@ -26,6 +26,11 @@
 
 set -euo pipefail
 
+# Site settings (environment paths, ...) live outside the repository, in
+# ~/.pdu_site.env (or the file named by PDU_SITE); see pdukit/hpc/README.md.
+# shellcheck disable=SC1090
+[ -f "${PDU_SITE:-$HOME/.pdu_site.env}" ] && . "${PDU_SITE:-$HOME/.pdu_site.env}"
+
 WORKINGDIR="${WORKINGDIR:-${SLURM_SUBMIT_DIR:-$PWD}}"
 _REPO="$(git -C "${SLURM_SUBMIT_DIR:-$PWD}" rev-parse --show-toplevel 2>/dev/null || true)"
 CODEDIR="${CODEDIR:-${_REPO:-$WORKINGDIR/pdukit}}"
