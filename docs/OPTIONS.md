@@ -69,6 +69,7 @@ The last column lists the shipped presets that change the option from its defaul
 | `backend` | flux | flux, schur | estimator backend: flux (FluxWorkspace) or schur (Schur- complement form) |  |
 | `combine` | max | max, sum, in, out | how incoming and outgoing channels form the cost: max, sum, in (incoming only) or out (outgoing only) |  |
 | `device` | auto |  | where the estimator runs: auto (CUDA GPU when torch can use one, else CPU), cuda, cpu or mps (run-specific, not in parameter files) |  |
+| `no-memory-check` | off |  | skip the check, before each workspace is built, that it fits in the free RAM (and GPU memory); the check stops the run with advice instead of letting it be killed |  |
 | `cond-unit` | full | full, reduced | unit's present subtracted whole (COG 2.1) or as unit_dim slow modes (v1.0) |  |
 | `cond-env` | full |  | environment's present subtracted whole ('full'), as N slow modes (an integer), or as env_dim modes ('reduced', v1.0) |  |
 

@@ -1,4 +1,4 @@
-# pdu — COG (v1.0.5a1)
+# pdu — COG (v1.0.5a2)
 
 > **Alpha release.** The method and the code are under active development; interfaces, output
 > formats and defaults may change before v1.0. Internally this is algorithm lineage "COG 2.1".
@@ -8,7 +8,7 @@ residues whose motions are coupled to each other more strongly than to the rest 
 protein, at a chosen lag time and for chosen per-residue features. It uses dynamics only;
 spatial contacts are not used in the search or in the baselines.
 
-This repository is the alpha pre-release (`v1.0.5a1`) of the COG pipeline (`pdukit` Python package).
+This repository is the alpha pre-release (`v1.0.5a2`) of the COG pipeline (`pdukit` Python package).
 It is the code behind the T4 lysozyme and synaptotagmin-1 C2A analyses.
 
 Every unit is scored two ways:

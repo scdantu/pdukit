@@ -22,6 +22,7 @@ from pdukit.cog.features import (
 from pdukit.cog.scoring.factory import (
     ball_support,
     build_workspace,
+    check_memory,
     choose_window,
     cond_kwargs,
     use_batched,
@@ -83,6 +84,10 @@ class WindowScan:
         sizes = [int(x) for x in str(a.null_cal_sizes).split(",") if x]
         N = feats_raw.shape[1]
         rows = []
+        check_memory(
+            a, f, a.null_cal_n_null, "the high-pass window scan",
+            extra=f.nbytes,
+        )
         for w in wins:
             t = time.perf_counter()
             X = f.copy()

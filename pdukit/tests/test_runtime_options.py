@@ -88,3 +88,72 @@ def test_no_note_on_a_machine_without_gpu(monkeypatch):
     monkeypatch.setattr(backend, "gpu_present", lambda: False)
     assert backend.gpu_note("auto", "cpu") is None
     assert "no CUDA GPU" in backend.gpu_note("cuda", "cpu")
+
+
+def _args(**kw):
+    from types import SimpleNamespace
+
+    base = dict(device="cpu", batched="auto", rse_components=-1,
+                no_memory_check=False)
+    base.update(kw)
+    return SimpleNamespace(**base)
+
+
+def test_workspace_estimate_matches_what_numpy_allocates():
+    import tracemalloc
+
+    import numpy as np
+
+    from pdukit.cog.scoring.factory import workspace_bytes
+    from pdukit.cog.scoring.workspace import FluxWorkspace
+
+    F, N, K, n_null = 2000, 100, 4, 16
+    feats = np.random.default_rng(0).normal(size=(F, N, K)).astype(
+        np.float32)
+    tracemalloc.start()
+    ws = FluxWorkspace(feats, lag=1, n_null=n_null, seed=0, device="cpu")
+    _, peak = tracemalloc.get_traced_memory()
+    tracemalloc.stop()
+    est = workspace_bytes(F, N * K, n_null)
+    assert ws.D == N * K
+    assert 0.7 < peak / est < 1.4
+
+
+def test_tester_case_is_stopped_with_settings_that_fit(monkeypatch):
+    import numpy as np
+
+    from pdukit.cog.scoring import factory
+    from pdukit.errors import ResourceError
+
+    # 400 residues, K = 20, 64 shifts on a 64 GB machine: ~67 GB needed
+    feats = np.lib.stride_tricks.as_strided(
+        np.zeros(1, np.float32), shape=(60000, 400, 20), strides=(0, 0, 0))
+    monkeypatch.setattr(factory, "available_memory", lambda: 60e9)
+    with pytest.raises(ResourceError) as err:
+        factory.check_memory(_args(), feats, 64, "the workspace")
+    msg = str(err.value)
+    assert "rse-max-components=" in msg and "n-null=" in msg
+    k = int(msg.split("rse-max-components=")[1].split()[0])
+    assert factory.workspace_bytes(60000, 400 * k, 64) <= 0.85 * 60e9
+    assert 10 <= k < 20
+
+
+def test_check_passes_when_it_fits_or_is_switched_off(monkeypatch):
+    import numpy as np
+
+    from pdukit.cog.scoring import factory
+
+    feats = np.zeros((100, 10, 4), np.float32)
+    monkeypatch.setattr(factory, "available_memory", lambda: 1e12)
+    assert factory.check_memory(_args(), feats, 64, "the workspace") > 0
+    monkeypatch.setattr(factory, "available_memory", lambda: 1.0)
+    factory.check_memory(_args(no_memory_check=True), feats, 64, "x")
+    monkeypatch.setattr(factory, "available_memory", lambda: None)
+    factory.check_memory(_args(), feats, 64, "x")  # unknown: no stop
+
+
+def test_available_memory_is_known_here():
+    from pdukit.cog.runinfo import available_memory
+
+    free = available_memory()
+    assert free is None or free > 0

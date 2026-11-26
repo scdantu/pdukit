@@ -59,6 +59,7 @@ SETTINGS = [
     ('estimator', 'backend', 'backend', 'str', 'flux', ['flux', 'schur'], False, False, 'estimator backend: flux (FluxWorkspace) or schur (Schur- complement form)'),
     ('estimator', 'combine', 'combine', 'str', 'max', ['max', 'sum', 'in', 'out'], False, False, 'how incoming and outgoing channels form the cost: max, sum, in (incoming only) or out (outgoing only)'),
     ('estimator', 'device', 'device', 'str', 'auto', None, False, True, 'where the estimator runs: auto (CUDA GPU when torch can use one, else CPU), cuda, cpu or mps'),
+    ('estimator', 'no-memory-check', 'no_memory_check', 'flag', False, None, False, False, 'skip the check, before each workspace is built, that it fits in the free RAM (and GPU memory); the check stops the run with advice instead of letting it be killed'),
     ('estimator', 'cond-unit', 'cond_unit', 'str', 'full', ['full', 'reduced'], False, False, "unit's present subtracted whole (COG 2.1) or as unit_dim slow modes (v1.0)"),
     ('estimator', 'cond-env', 'cond_env', 'str', 'full', None, False, False, "environment's present subtracted whole ('full'), as N slow modes (an integer), or as env_dim modes ('reduced', v1.0)"),
     ('calibration', 'sizes', 'sizes', 'str', None, None, False, False, "calibration sizes, e.g. '2-40' (default 2..max-unit)"),

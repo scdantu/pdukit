@@ -57,7 +57,13 @@ def _run(argv, planted=False):
     if args.check:
         sys.stdout.write(cfg.to_ppf(sources=True))
         return 0
-    return Pipeline(RunState(cfg)).run()
+    from pdukit.errors import ResourceError
+
+    try:
+        return Pipeline(RunState(cfg)).run()
+    except ResourceError as exc:
+        print(f"pdu: stopped: {exc}", file=sys.stderr)
+        return 3
 
 
 def _check(argv):

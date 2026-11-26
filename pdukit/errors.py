@@ -11,3 +11,7 @@ class ConfigError(PduError, ValueError):
 
 class PpfError(ConfigError):
     """A parameter file could not be read."""
+
+
+class ResourceError(PduError):
+    """The run needs more memory (RAM or GPU) than this machine has free."""

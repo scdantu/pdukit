@@ -89,6 +89,11 @@ backend = flux
 ; only) or out (outgoing only) [max, sum, in, out]
 combine = max
 
+; skip the check, before each workspace is built, that it fits in the free
+; RAM (and GPU memory); the check stops the run with advice instead of
+; letting it be killed
+no-memory-check = 0
+
 ; unit's present subtracted whole (COG 2.1) or as unit_dim slow modes (v1.0)
 ; [full, reduced]
 cond-unit = full

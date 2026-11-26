@@ -13,6 +13,7 @@ from pdukit.cog.scoring import scorer as flux_scorer
 from pdukit.cog.scoring.backend import gpu_note
 from pdukit.cog.scoring.factory import (
     build_workspace,
+    check_memory,
     cond_kwargs,
     engine_scorer,
 )
@@ -28,6 +29,8 @@ class BuildWorkspaceStage:
         """Advance ``state`` by this stage."""
         args = state.args
         t = time.perf_counter()
+        if state.p_disc is None:
+            check_memory(args, state.f_disc, args.n_null, "the workspace")
         state.ws = build_workspace(
             args,
             state.f_disc,

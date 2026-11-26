@@ -190,5 +190,6 @@ Use these for lag scans, mutants, and replicas split into halves.
 | Atom count differs between topology and trajectory | strip the same atoms in both |
 | Many units flagged low evidence | more seeds (`--set dec-seeds=64`), more or longer replicas |
 | High unassigned % | try other lags; check replicas really are independent |
+| Stopped with `not enough RAM` (or killed) | the workspace needs about (6 + 2 x n-null) x (residues x K)^2 x 8 bytes; the message gives settings that fit: fewer modes (`rse-max-components`) or fewer shifts (`n-null`) |
 | Run too slow | use a GPU (`.[gpu]`, `--set backend=...`), or the Slurm scripts |
 | Want to know what a setting does | `pdu run -h`, `docs/OPTIONS.md` |

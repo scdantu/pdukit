@@ -4,7 +4,8 @@
 commit, GPU) for the run record; ``_parse_sizes`` reads a size list such
 as ``6-10,12``;
 ``_available_cores`` counts the cores this process may use;
-``limit_threads`` caps the threads numpy/scipy and torch use.
+``limit_threads`` caps the threads numpy/scipy and torch use;
+``available_memory`` / ``gpu_free_memory`` say how much memory is left.
 """
 
 from __future__ import annotations
@@ -14,6 +15,7 @@ import platform
 import socket
 import subprocess
 import sys
+from pathlib import Path
 
 import numpy as np
 
@@ -56,6 +58,82 @@ def limit_threads(n):
             torch.set_num_threads(old_torch)
 
     return n, cores, undo
+
+
+def _meminfo_available():
+    """Return free RAM in bytes (Linux MemAvailable), or None."""
+    try:
+        with open("/proc/meminfo") as fh:
+            for line in fh:
+                if line.startswith("MemAvailable:"):
+                    return int(line.split()[1]) * 1024
+    except (OSError, ValueError):
+        pass
+    return None
+
+
+def _cgroup_left():
+    """Return what is left of this process's cgroup memory limit, or None.
+
+    A Slurm job's ``--mem`` is such a limit.  cgroup v2: the smallest
+    ``memory.max - memory.current`` of the process's group and its parents;
+    cgroup v1: ``memory.limit_in_bytes - memory.usage_in_bytes``.
+    """
+    try:
+        lines = Path("/proc/self/cgroup").read_text().splitlines()
+    except OSError:
+        return None
+    left = []
+    for line in lines:
+        _, ctrl, path = line.split(":", 2)
+        if ctrl == "":
+            root = Path("/sys/fs/cgroup")
+            names = ("memory.max", "memory.current")
+        elif "memory" in ctrl.split(","):
+            root = Path("/sys/fs/cgroup/memory")
+            names = ("memory.limit_in_bytes", "memory.usage_in_bytes")
+        else:
+            continue
+        group = root / path.lstrip("/")
+        for g in (group, *group.parents):
+            if root not in (g, *g.parents):
+                break
+            try:
+                limit = (g / names[0]).read_text().strip()
+                used = int((g / names[1]).read_text())
+            except (OSError, ValueError):
+                continue
+            if limit.isdigit() and int(limit) < 1 << 60:
+                left.append(max(0, int(limit) - used))
+    return min(left) if left else None
+
+
+def available_memory():
+    """Return the bytes of RAM this process can still use, or None.
+
+    The smaller of the free RAM and what is left of the job's memory limit
+    (cgroup, e.g. Slurm ``--mem``).  Where neither is known (macOS) the
+    total RAM is used.
+    """
+    vals = [v for v in (_meminfo_available(), _cgroup_left()) if v]
+    if vals:
+        return min(vals)
+    try:
+        return os.sysconf("SC_PAGE_SIZE") * os.sysconf("SC_PHYS_PAGES")
+    except (AttributeError, OSError, ValueError):
+        return None
+
+
+def gpu_free_memory():
+    """Return the free memory of the current CUDA GPU in bytes, or None."""
+    try:
+        import torch
+
+        if torch.cuda.is_available():
+            return int(torch.cuda.mem_get_info()[0])
+    except Exception:  # noqa: BLE001 -- no torch, no driver, ...
+        pass
+    return None
 
 
 def _parse_sizes(text):
