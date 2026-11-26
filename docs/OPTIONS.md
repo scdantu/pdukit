@@ -1,12 +1,98 @@
 # PDU settings reference
 
-Generated from the settings table by `python -m pdukit.config.reference --write`; do not edit by hand.
+Generated from the settings table by `python -m pdukit.config.reference --write`; do not edit by hand (the explanations are in `pdukit/config/guide.py`).
 
-Every setting is a key in a parameter file (`lag = 10`; see `pdukit/params/default.ppf` for a file with every setting at its default).  To change one for a single run, use `--set` (`pdu run -p my.ppf --set lag=10`).  Precedence: built-in default (below), then the parameter file (`-p`), then `--set` and the other command-line arguments.  Flags are written `1` or `0`.  The command-line arguments of `pdu run` are only `-f`, `-s`, `-p`, `-o`, `--set`, `--log-level` and `--check`.
+Every setting is a `key = value` line in a parameter file (a `.ppf`).  Start
+from a shipped preset (listed at the end of this page; `pdu check -p
+workstation > my.ppf` writes a copy) or from `pdu check > my.ppf`, which
+writes every setting at its default with a comment.  Then run
+
+    pdu run -p my.ppf -f rep1.xtc rep2.xtc -s top.pdb -o out
+
+`pdu run` has eight arguments: `-f` trajectories (one file per replica), `-s`
+topology, `-p` parameter file, `-o` output folder, `--nt` CPU threads,
+`--set` (change any setting for one run: `--set lag=20 n-null=32`),
+`--log-level` and `--check` (print what will be used, and where each value
+came from, then stop).  Precedence: built-in default, then the parameter
+file, then the command line.  Case, `-` and `_` do not matter in keys; an
+unknown key is an error with a suggestion.  Flags are written `1` or `0`.
+
+Times are in **frames**, not ps: `lag = 10` with 20 ps frames is 200 ps.
+
+Every run writes `pdu.log` (the screen log) and `pdu_out.ppf` (every setting
+it really used) into the output folder; `pdu run -p out/pdu_out.ppf ...`
+repeats it.
+
+## Start here: the settings most runs change
+
+| setting | default | what it means |
+|---|---|---|
+| `lag` | 1 | The time step at which coupling is measured, in frames. A unit is a group of residues whose future depends on the rest of the protein as little as possible, AT THIS TIME SCALE. Choose it from the motion you care about: 100 ps - 10 ns are typical. Units change with the lag; a scan over several lags is the honest way to report them. |
+| `frame-ps` | 0.0 | Time between saved frames in ps. Only used to print times in the log; set it so the log speaks in ps and ns. |
+| `highpass-window` | 0 | Removes motions slower than this many frames inside every replica before anything is measured. Slow drift that a trajectory does not sample makes everything look correlated with everything and hides real units. 20 x lag is our rule; 0 = off; 'auto' scans a few windows to choose one (slow: about one workspace per window). |
+| `highpass-before-features` | off | 1 = filter the raw distances before each residue's slow modes are chosen (recommended with a high-pass window). |
+| `rse-components` | -1 | K, the number of slow modes (tICA) kept per residue. -1 = choose K so the median residue keeps rse-coverage of its slow motion. K sets the size of the problem: memory grows with (residues x K)^2. |
+| `rse-max-components` | 0 | Upper limit on the K chosen automatically. The first setting to lower when memory is short; 8-12 fits a workstation. |
+| `n-null` | 64 | Time shifts used to build the null (the 'what would chance give' reference). 64 is precise; 32 halves the memory and time of the null with slightly noisier thresholds. |
+| `dec-seeds` | 24 | Number of growth starts. Keep seeds at or below a quarter of the residues (see seed-fraction) so units are found by growth, not by cutting overlapping candidates apart. |
+| `seed-fraction` | 0.0 | Caps the seeds at this fraction of the residues (0.25 recommended). |
+| `seed-group` | 1 | Residues in each growth start: 2 = the seed plus its strongest partner. A single residue has too few slow modes to predict anything, so the first addition often looks worse; starting from pairs avoids that barrier. |
+| `min-size` | 3 | Smallest unit kept. Use at least twice seed-group (4 with pairs), or pairs that never grew are reported as units. |
+| `device` | auto | Where the heavy algebra runs: auto (a CUDA GPU when torch can use it), cpu or cuda. pdu works in double precision: data-centre GPUs (A100, H100, GH200) are fast at it, consumer cards (GeForce, RTX A-series) are not, so use cpu there. |
+| `nt` | -1 | CPU threads (`--nt N` on the command line). -1 = all the cores the job may use; on a shared machine give the number you were allocated. |
+| `log-level` | info | quiet, info (one line per step) or debug (every growth step). Lines starting with ! are warnings. |
+
+## Memory, time and where to run
+
+**Memory.**  The estimator stacks every residue's K modes into one vector of
+length D = residues x K and keeps D x D matrices in double precision: three
+for the data and two for every null shift.  So
+
+    bytes ~ (6 + 2 x n-null) x (residues x K)^2 x 8  +  12 x frames x D
+
+| residues | K | n-null | matrices (without the frames term) |
+|---|---|---|---|
+| 160 | 8 | 64 | ~2 GB + frames term |
+| 400 | 8 | 32 | ~6 GB |
+| 400 | 12 | 32 | ~13 GB |
+| 400 | 20 | 64 | ~69 GB |
+
+The frames term matters for long trajectories: 2.6 million frames at
+D = 4400 add about 140 GB.  Before each large step the log prints the
+estimate and the free memory (`memory for the workspace: ~13.0 GB ...`);
+if it does not fit, the run stops at once and names the settings that do
+(`rse-max-components`, `n-null`).  `no-memory-check = 1` skips this.
+
+**Time.**  Building the null costs about frames x D^2 x n-null operations,
+so the same three numbers set the run time.  Fewer frames (`stride = 2`
+keeps every second frame; then halve `lag` and `highpass-window`, which
+are in frames) is the other lever.
+
+**On a workstation** (32-64 GB, consumer GPU or none): start from the
+`workstation` preset.  It runs on the CPU, keeps at most 12 modes per
+residue and 32 shifts, and fits a 400-residue protein with 60,000 frames in
+about 16 GB.  Write your own copy, set the time settings (`frame-ps`, `lag`,
+`highpass-window`) in it, and run:
+
+    pdu check -p workstation > my.ppf
+    pdu run -p my.ppf -f rep1.xtc rep2.xtc -s top.pdb -o out --nt 8
+
+(A shipped preset can be named without its path: `-p workstation`.)
+
+**On a GPU**: install torch for your CUDA first (CUDA 12.1:
+`pip install "torch<2.6" --index-url https://download.pytorch.org/whl/cu121`).
+The log line `WSP ... backend torch on cuda` confirms the GPU is used; a
+warning names cards that are slow in double precision.  The GPU must also
+hold the matrices above, so on an 8 GB card with 32 shifts D = residues x K
+must stay below about 3,800 (e.g. 300 residues at K = 12).
+
+## All settings
 
 The last column lists the shipped presets that change the option from its default, with their value.
 
-## Files and general options
+### Files and general options
+
+Run bookkeeping: random seed, log detail, threads, and where the files are.
 
 | setting | default | values | what it does | presets |
 |---|---|---|---|---|
@@ -16,7 +102,9 @@ The last column lists the shipped presets that change the option from its defaul
 | `outdir` | unset |  | output directory (run-specific, not in parameter files) |  |
 | `params` | unset |  | parameter file (.ppf, key = value); command-line options win (run-specific, not in parameter files) |  |
 
-## Planted benchmark
+### Planted benchmark
+
+`pdu bench` runs the pipeline on a synthetic system whose units are known, to check an install or a setting.  These settings describe that system; they are ignored for MD data.
 
 | setting | default | values | what it does | presets |
 |---|---|---|---|---|
@@ -39,7 +127,9 @@ The last column lists the shipped presets that change the option from its defaul
 | `design-replicas` | 0 |  | (named design) number of replicas; 0 = the design default |  |
 | `design-rho-fast` | 0.8 |  | (small-hierarchy) per-frame autocorrelation of the fast sub-unit modes |  |
 
-## MD data
+### MD data
+
+How trajectories become per-residue features: which frames are read, and how each residue's environment (its distances to every residue within rse-cutoff) is compressed into K slow modes.
 
 | setting | default | values | what it does | presets |
 |---|---|---|---|---|
@@ -50,30 +140,34 @@ The last column lists the shipped presets that change the option from its defaul
 | `rse-cutoff` | 15.0 |  | radius in angstrom of a residue's structural environment: neighbours inside it enter its descriptor |  |
 | `rse-components` | -1 |  | slow tICA components kept per residue after compressing its neighbour distances: a number >= 1, or -1 = choose it from rse-coverage (two passes over the distances) | betalactamase_incoming: 8, mdcath_incoming: 8, planted_fast: 8, synthetic100: 8, synthetic36: 8, syt_c2a_incoming: 8, t4l_incoming: 8, tutorial: 8 |
 | `rse-coverage` | 0.9 |  | with rse-components = -1: smallest number of tICA modes at which the median residue keeps this share of its kinetic variance (sum of lambda^2 over its whole spectrum); always reported in results tica_spectrum.coverage |  |
-| `rse-max-components` | 0 |  | with rse-components = -1: upper limit on the chosen number of tICA modes (0 = none); memory is frames x residues x modes x 4 bytes per feature set |  |
+| `rse-max-components` | 0 |  | with rse-components = -1: upper limit on the chosen number of tICA modes (0 = none); memory is frames x residues x modes x 4 bytes per feature set | workstation: 12 |
 | `min-seq-sep` | 2 |  | neighbours closer than this in sequence are left out of the descriptor (trivially rigid) |  |
 | `contact-cutoff` | 8.0 |  | angstrom cutoff of the residue contact graph (growth only follows contacts) |  |
 | `pair-features` | off |  | add pair-owned contact-distance features (Stage 4) |  |
 | `pair-cutoff` | 8.0 |  | (pair features) angstrom cutoff for pair contacts |  |
 
-## Estimator
+### Estimator
+
+How coupling is measured: the lag, how many slow coordinates describe a unit and its environment, the null that sets the noise threshold, and where the algebra runs.
 
 | setting | default | values | what it does | presets |
 |---|---|---|---|---|
-| `lag` | 1 |  | lag in frames between the two time points whose coupling is measured (one frame = frame-ps) | syt_c2a_incoming: 5, t4l_incoming: 25, tutorial: 10 |
+| `lag` | 1 |  | lag in frames between the two time points whose coupling is measured (one frame = frame-ps) | syt_c2a_incoming: 5, t4l_incoming: 25, tutorial: 10, workstation: 10 |
 | `unit-dim` | 8 |  | slow coordinates kept to describe each unit |  |
 | `env-dim` | 20 |  | slow coordinates kept to describe the environment (the rest of the protein) |  |
 | `ridge` | 0.01 |  | regularisation added to the covariance matrices before they are inverted |  |
-| `n-null` | 64 |  | time shifts used to build the null distribution of the canonical correlations | betalactamase_incoming: 128, mdcath_incoming: 128, syt_c2a_incoming: 128, t4l_incoming: 128, tutorial: 32 |
+| `n-null` | 64 |  | time shifts used to build the null distribution of the canonical correlations | betalactamase_incoming: 128, mdcath_incoming: 128, syt_c2a_incoming: 128, t4l_incoming: 128, tutorial: 32, workstation: 32 |
 | `shift-mode` | auto | auto, global, within, cross | how the null displaces the environment in time: global (pooled), within (each replica), cross (a different replica); auto = cross with 2+ replicas, else within |  |
 | `backend` | flux | flux, schur | estimator backend: flux (FluxWorkspace) or schur (Schur- complement form) |  |
 | `combine` | max | max, sum, in, out | how incoming and outgoing channels form the cost: max, sum, in (incoming only) or out (outgoing only) |  |
-| `device` | auto |  | where the estimator runs: auto (CUDA GPU when torch can use one, else CPU), cuda, cpu or mps (run-specific, not in parameter files) |  |
+| `device` | auto |  | where the estimator runs: auto (CUDA GPU when torch can use one, else CPU), cuda, cpu or mps | workstation: cpu |
 | `no-memory-check` | off |  | skip the check, before each workspace is built, that it fits in the free RAM (and GPU memory); the check stops the run with advice instead of letting it be killed |  |
 | `cond-unit` | full | full, reduced | unit's present subtracted whole (COG 2.1) or as unit_dim slow modes (v1.0) |  |
 | `cond-env` | full |  | environment's present subtracted whole ('full'), as N slow modes (an integer), or as env_dim modes ('reduced', v1.0) |  |
 
-## Calibration
+### Calibration
+
+Before the search, random groups of each size are scored to learn what a group of that size looks like by chance.  Units must beat that baseline.  These settings trade calibration precision for time.
 
 | setting | default | values | what it does | presets |
 |---|---|---|---|---|
@@ -84,7 +178,9 @@ The last column lists the shipped presets that change the option from its defaul
 | `batch-supports` | 32 |  | calibration supports scored per batch |  |
 | `calibrate-only` | off |  | stop after the calibration (to check thetas, the baseline and the time before a full run) |  |
 
-## Discovery
+### Discovery
+
+The search itself: high-pass filtering and its window scan, seeds, growth (add the residue that best lowers incoming dependence), merging of repeated candidates, the recursive split test, ports, and performance switches.  Most runs change only the seed settings, min-size and the high-pass window.
 
 | setting | default | values | what it does | presets |
 |---|---|---|---|---|
@@ -92,12 +188,13 @@ The last column lists the shipped presets that change the option from its defaul
 | `holdout-replicas` | unset |  | comma list, or 'none' to discover on everything |  |
 | `n-holdout` | unset |  | hold out the last N replicas (0 = discover on all); alternative to the two lists above | betalactamase_incoming: 0, mdcath_incoming: 0, syt_c2a_incoming: 0, t4l_incoming: 0, tutorial: 0 |
 | `no-center-replicas` | off |  | keep each replica's mean (v1.0 behaviour); by default every replica is centred on its own mean |  |
-| `highpass-before-features` | off |  | apply --highpass-window to the raw neighbour distances BEFORE each residue's slow directions are chosen (MD data) | betalactamase_incoming: 1, mdcath_incoming: 1, syt_c2a_incoming: 1, t4l_incoming: 1, tutorial: 1 |
+| `highpass-before-features` | off |  | apply --highpass-window to the raw neighbour distances BEFORE each residue's slow directions are chosen (MD data) | betalactamase_incoming: 1, mdcath_incoming: 1, syt_c2a_incoming: 1, t4l_incoming: 1, tutorial: 1, workstation: 1 |
 | `fit` | off |  | remove overall rotation and translation (Kabsch) before building features | betalactamase_incoming: 1, mdcath_incoming: 1, syt_c2a_incoming: 1, t4l_incoming: 1, tutorial: 1 |
-| `calibrate-coarse` | 0 |  | calibrate only ~N sizes spread over the range and interpolate the rest (0 = every size) | betalactamase_incoming: 8, mdcath_incoming: 8, synthetic100: 6, syt_c2a_incoming: 8, t4l_incoming: 8, tutorial: 4 |
+| `calibrate-coarse` | 0 |  | calibrate only ~N sizes spread over the range and interpolate the rest (0 = every size) | betalactamase_incoming: 8, mdcath_incoming: 8, synthetic100: 6, syt_c2a_incoming: 8, t4l_incoming: 8, tutorial: 4, workstation: 4 |
 | `skip-frames` | 0 |  | drop the first N frames of every replica |  |
-| `highpass-window` | 0 |  | remove a running mean of this many frames within every replica (0 = off; 'auto' = the smallest window whose null threshold is within --null-cal-tol of the lowest in the null calibration scan) | betalactamase_incoming: 50, mdcath_incoming: 50, syt_c2a_incoming: 100, t4l_incoming: 500, tutorial: 300 |
-| `no-null-calibration` | off |  | skip the highpass-window scan before discovery | betalactamase_incoming: 1, mdcath_incoming: 1, syt_c2a_incoming: 1, t4l_incoming: 1, tutorial: 1 |
+| `highpass-window` | 0 |  | remove a running mean of this many frames within every replica (0 = off; 'auto' = the smallest window whose null threshold is within --null-cal-tol of the lowest in the null calibration scan) | betalactamase_incoming: 50, mdcath_incoming: 50, syt_c2a_incoming: 100, t4l_incoming: 500, tutorial: 300, workstation: 200 |
+| `no-null-calibration` | off |  | never run the highpass-window scan, not even for highpass-window = auto (which then stops with an error) | betalactamase_incoming: 1, mdcath_incoming: 1, syt_c2a_incoming: 1, t4l_incoming: 1, tutorial: 1 |
+| `null-cal-check` | off |  | run the highpass-window scan even when the window is fixed or off, as a check (it is always run for highpass-window = auto); costs about one workspace per window tried |  |
 | `null-cal-windows` | auto |  | comma list of windows (frames) to scan; 'auto' = geometric from 10 x lag to a replica / 8 |  |
 | `null-cal-n-windows` | 6 |  | (highpass-window scan) number of windows tried |  |
 | `null-cal-sizes` | 3,10 |  | (highpass-window scan) comma list of support sizes used |  |
@@ -135,29 +232,33 @@ The last column lists the shipped presets that change the option from its defaul
 | `cohesion-blocks` | 20 |  | at least this many blocks (whole replicas if there are enough, else replicas split in contiguous blocks) |  |
 | `null-cal-tol` | 0.15 |  | 'auto' window = the smallest window whose null threshold is within this fraction of the lowest one in the scan |  |
 | `null-cal-max-replicas` | 20 |  | scan on at most this many replicas (evenly spaced) |  |
-| `frame-ps` | 0.0 |  | time per frame in ps, for the logs only | betalactamase_incoming: 1000.0, mdcath_incoming: 1000.0, syt_c2a_incoming: 100.0, t4l_incoming: 20.0, tutorial: 20 |
+| `frame-ps` | 0.0 |  | time per frame in ps, for the logs only | betalactamase_incoming: 1000.0, mdcath_incoming: 1000.0, syt_c2a_incoming: 100.0, t4l_incoming: 20.0, tutorial: 20, workstation: 20 |
 | `batched` | auto | auto, on, off | score candidates in batches on the GPU engine (auto: when the workspace is on CUDA) |  |
 | `env-basis` | exact | exact, ritz | 'ritz' = environment slow basis from the global slow modes + block inverse (faster, approximate) |  |
 | `feature-cache` | unset |  | feature cache directory (default: <outdir>/../_feature_cache) (run-specific, not in parameter files) |  |
 | `no-feature-cache` | off |  | do not read or write the feature cache |  |
 | `no-replica-overlap` | off |  | skip the tICA check of whether replicas visit the same states | betalactamase_incoming: 1, mdcath_incoming: 1, syt_c2a_incoming: 1, t4l_incoming: 1, tutorial: 1 |
-| `dec-seeds` | 24 |  | (decomposition) number of seed residues | betalactamase_incoming: 32, mdcath_incoming: 32, planted_fast: 16, synthetic100: 32, synthetic36: 16, syt_c2a_incoming: 32, t4l_incoming: 32, tutorial: 16 |
-| `seed-fraction` | 0.0 |  | cap the number of seeds at this fraction of the residues (e.g. 0.25), so detection relies on growth, not on splitting overlaps; 0 = no cap (dec-seeds only) |  |
-| `seed-group` | 1 |  | residues in each growth start: 1 = the seed alone (default); N = the seed plus its N-1 strongest predictive partners; 0 = just enough residues to fill unit-dim (ceil(unit-dim / features per residue)), so the first growth step compares sets with the same number of coordinates |  |
+| `dec-seeds` | 24 |  | (decomposition) number of seed residues | betalactamase_incoming: 32, mdcath_incoming: 32, planted_fast: 16, synthetic100: 32, synthetic36: 16, syt_c2a_incoming: 32, t4l_incoming: 32, tutorial: 16, workstation: 32 |
+| `seed-fraction` | 0.0 |  | cap the number of seeds at this fraction of the residues (e.g. 0.25), so detection relies on growth, not on splitting overlaps; 0 = no cap (dec-seeds only) | workstation: 0.25 |
+| `seed-group` | 1 |  | residues in each growth start: 1 = the seed alone (default); N = the seed plus its N-1 strongest predictive partners; 0 = just enough residues to fill unit-dim (ceil(unit-dim / features per residue)), so the first growth step compares sets with the same number of coordinates | workstation: 2 |
 | `max-size` | 16 |  | (decomposition) largest candidate grown from one seed (residues) | betalactamase_incoming: 120, mdcath_incoming: 120, planted_fast: 14, synthetic100: 24, synthetic36: 14, syt_c2a_incoming: 120, t4l_incoming: 120 |
-| `min-size` | 3 |  | (decomposition) smallest unit kept (residues) |  |
+| `min-size` | 3 |  | (decomposition) smallest unit kept (residues) | workstation: 4 |
 | `max-unit` | 40 |  | (decomposition) largest unit after merging (residues); also the top calibration size | betalactamase_incoming: 120, mdcath_incoming: 120, planted_fast: 14, synthetic100: 24, synthetic36: 14, syt_c2a_incoming: 120, t4l_incoming: 120, tutorial: 16 |
 | `add-gate` | ratio | ratio, none | ratio: a residue new to a unit may join (merge, reassignment, round-2 joins, MC) only if it predicts the unit's members more than the rest of the protein; none = old behaviour |  |
 | `n-controls` | 8 |  | matched control sets (random, contiguous, ball) scored per unit size |  |
 
-## Verification
+### Verification
+
+After discovery the units are scored again at other lags, to show which hold across time scales.
 
 | setting | default | values | what it does | presets |
 |---|---|---|---|---|
 | `verify-lags` | 1,5,25 |  | comma list of lags (frames) at which the units are re-scored; 'none' skips this | betalactamase_incoming: none, mdcath_incoming: none, syt_c2a_incoming: none, t4l_incoming: none, tutorial: none |
 | `verify-null` | 32 |  | time shifts used for the verification null |  |
 
-## Global-mode recovery
+### Global-mode recovery
+
+At the end the units' own slow motions are combined to see how much of the protein's global slow motion they explain.
 
 | setting | default | values | what it does | presets |
 |---|---|---|---|---|
@@ -168,3 +269,18 @@ The last column lists the shipped presets that change the option from its defaul
 | `recovery-combinations` | auto | auto, all, singles-pairs | auto: exhaustive up to 8 PDUs; otherwise singles, pairs, leave-one-out and all |  |
 | `recovery-max-combinations` | 256 |  | (global-mode recovery) most unit combinations tried |  |
 | `recovery-subsets` | unset |  | optional JSON list of combinations of zero-based final PDU IDs |  |
+
+## Shipped presets
+
+In `pdukit/params/` (installed with the package; `python -c "from importlib.resources import files; print(files('pdukit.params'))"` prints the folder).
+
+- `betalactamase_incoming.ppf`: Beta-lactamases (DyNoPy_Data: KPC-2, PDC-3, SHV-1, TEM-1): current COG pipeline, 1 ns frames
+- `mdcath_incoming.ppf`: mdCATH domains: current COG pipeline (incoming growth, merge, split, ports, mode recovery)
+- `planted_fast.ppf`: planted fast test (6 units x 6 residues, 2 replicas x 3000 frames); reference at 7acf4cf: core 25, port 5, loose 6, 5 units
+- `synthetic100.ppf`: Synthetic suite, 100 residues (pdukit.bench.designs): units, mixed, nocomm, medium, tau
+- `synthetic36.ppf`: Synthetic suite, 36 residues (the first suite; pdukit.bench.designs small-*)
+- `syt_c2a_incoming.ppf`: Synaptotagmin-1 C2A (100 ps frames, lag 5 = 500 ps): incoming-only growth
+- `t4l_incoming.ppf`: T4 lysozyme (164 residues, 20 ps frames, lag 25 = 500 ps): incoming-only growth
+- `tutorial.ppf`: Tutorial settings: small and fast (a few minutes on a laptop CPU) for the demo trajectories made by tools/make_demo_trajectories.py (40 residues, 1500 frames of 20 ps)
+- `workstation.ppf`: pdu preset for a workstation: 32-64 GB of RAM and a consumer GPU (for example an RTX 3070 with 8 GB) or no GPU at all
+- `final/`: the final runs of the paper (T4L WT and L99A, Syt1 C2A, mdCATH) at seven lags, with `submit_final.sh`

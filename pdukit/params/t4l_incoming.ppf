@@ -1,4 +1,4 @@
-; Incoming-only growth. Same distance features, lag and filtering as prior runs.
+; T4 lysozyme (164 residues, 20 ps frames, lag 25 = 500 ps): incoming-only growth. Same distance features, lag and filtering as prior runs.
 ; Incoming-only growth, recursive within-parent cohesion splitting, global-mode recovery.
 seed = 0
 frames         = 0

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import re
 import shutil
 
 CU121 = (
@@ -82,3 +83,39 @@ def gpu_note(requested, device):
         f"{torch.version.cuda}) cannot use it: running on CPU. Install the "
         f"torch build that matches your driver, e.g. for CUDA 12.1: {CU121}"
     )
+
+
+# GPUs with full-rate double precision (about 1/2 of single precision);
+# most others -- GeForce, RTX A-series, Quadro -- run it at 1/32 to 1/64.
+FAST_FP64 = re.compile(
+    r"\b(A100|A30|A800|H100|H200|H800|GH200|GB200|B100|B200|V100|P100|"
+    r"TITAN V|MI[123]\d{2}X?)\b",
+    re.IGNORECASE,
+)
+
+
+def fp64_note(name):
+    """Warning for a GPU whose double precision is slow, or None.
+
+    pdu scores in double precision, so on such a card the CPU (with
+    ``--nt``) is often as fast and has far more memory.
+    """
+    if not name or FAST_FP64.search(name):
+        return None
+    return (
+        f"!!GPU {name}: double precision on this card runs at about 1/32 to "
+        "1/64 of single precision, and pdu scores in double precision; "
+        "device=cpu with --nt <cores> is often as fast, and has more memory"
+    )
+
+
+def gpu_name():
+    """Return the name of the current CUDA GPU, or None."""
+    try:
+        import torch
+
+        if torch.cuda.is_available():
+            return torch.cuda.get_device_name(0)
+    except Exception:  # noqa: BLE001
+        pass
+    return None

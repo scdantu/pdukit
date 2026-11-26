@@ -23,7 +23,7 @@ import sys
 import textwrap
 from pathlib import Path
 
-from pdukit.config import SETTINGS
+from pdukit.config import SETTINGS, guide
 from pdukit.config.config import TRUE
 from pdukit.io.ppf import read_ppf
 
@@ -35,7 +35,7 @@ PPF_HEADER = """\
 ; edit by hand.  Copy it, delete the lines you do not change and use it with
 ; `pdu run -p my.ppf ...`.  Precedence: command line, then this file, then
 ; the built-in default.  Settings that describe a run rather than the
-; science (files, output folder, device) are not listed.  The full text of
+; science (files, output folder, threads) are not listed.  The full text of
 ; each setting is in docs/OPTIONS.md.
 """
 
@@ -99,21 +99,35 @@ def _clean(text):
 def render_markdown():
     """Return the settings reference as markdown text."""
     presets = preset_values()
+    rows = {row[1]: row for row in SETTINGS}
     lines = [
         "# PDU settings reference",
         "",
         "Generated from the settings table by "
         "`python -m pdukit.config.reference --write`; "
-        "do not edit by hand.",
+        "do not edit by hand (the explanations are in "
+        "`pdukit/config/guide.py`).",
         "",
-        "Every setting is a key in a parameter file (`lag = 10`; see "
-        "`pdukit/params/default.ppf` for a file with every setting at its "
-        "default).  To change one for a single run, use `--set` "
-        "(`pdu run -p my.ppf --set lag=10`).  Precedence: built-in default "
-        "(below), then the parameter file (`-p`), then `--set` and the other "
-        "command-line arguments.  Flags are written `1` or `0`.  The "
-        "command-line arguments of `pdu run` are only `-f`, `-s`, `-p`, "
-        "`-o`, `--set`, `--log-level` and `--check`.",
+        guide.INTRO.rstrip(),
+        "",
+        "## Start here: the settings most runs change",
+        "",
+        "| setting | default | what it means |",
+        "|---|---|---|",
+    ]
+    for key, text in guide.START_HERE:
+        row = rows[key]
+        lines.append(
+            f"| `{key}` | {_clean(_default_text(row[3], row[4]))} "
+            f"| {_clean(text)} |"
+        )
+    lines += [
+        "",
+        "## Memory, time and where to run",
+        "",
+        guide.RUN_SIZE.rstrip(),
+        "",
+        "## All settings",
         "",
         "The last column lists the shipped presets that change the option "
         "from its default, with their value.",
@@ -125,7 +139,9 @@ def render_markdown():
         if group != title:
             title = group
             lines += [
-                f"## {title[0].upper() + title[1:]}",
+                f"### {title[0].upper() + title[1:]}",
+                "",
+                guide.GROUP_INTRO[title],
                 "",
                 "| setting | default | values | what it does | presets |",
                 "|---|---|---|---|---|",
@@ -146,11 +162,35 @@ def render_markdown():
     # a blank line closes each table
     out, prev = [], ""
     for line in lines:
-        if line.startswith("## ") and prev.startswith("|"):
+        if line.startswith("#") and prev.startswith("|"):
             out.append("")
         out.append(line)
         prev = line
+    out += ["", "## Shipped presets", "",
+            "In `pdukit/params/` (installed with the package; "
+            "`python -c \"from importlib.resources import files; "
+            "print(files('pdukit.params'))\"` prints the folder).", ""]
+    for name, first in preset_summaries():
+        out.append(f"- `{name}.ppf`: {_clean(first)}")
+    out.append("- `final/`: the final runs of the paper (T4L WT and L99A, "
+               "Syt1 C2A, mdCATH) at seven lags, with `submit_final.sh`")
     return "\n".join(out) + "\n"
+
+
+def preset_summaries():
+    """Return (name, first comment sentence) for each shipped preset."""
+    out = []
+    for path in sorted(PARAMS.glob("*.ppf")):
+        if path.name == "default.ppf":
+            continue
+        text = []
+        for line in path.read_text().splitlines():
+            if not line.startswith(";"):
+                break
+            text.append(line.lstrip("; ").strip())
+        words = " ".join(t for t in text if t).split(". ")[0].rstrip(".")
+        out.append((path.stem, words or "(no description)"))
+    return out
 
 
 def render_default_ppf():

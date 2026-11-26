@@ -1,0 +1,33 @@
+; pdu preset for a workstation: 32-64 GB of RAM and a consumer GPU (for
+; example an RTX 3070 with 8 GB) or no GPU at all.
+;
+;   pdu run -p workstation.ppf -f rep1.xtc rep2.xtc -s top.pdb -o out --nt 8
+;
+; Copy this file and set the three TIME settings for your trajectories first.
+; Everything else is chosen so that a 400-residue protein with ~60,000 frames
+; fits in about 16 GB.  The log says how much memory each step needs before
+; it starts, and stops with settings that fit if it does not.
+
+; ---- time: SET THESE ----
+frame-ps = 20                 ; time between saved frames, in ps (logs only)
+lag      = 10                 ; lag in FRAMES: 10 x 20 ps = 200 ps
+highpass-window = 200         ; 20 x lag: remove motions slower than this
+highpass-before-features = 1  ; filter the raw distances, before the tICA
+
+; ---- where it runs ----
+; Consumer GPUs run double precision at 1/32-1/64 speed and have too little
+; memory for the workspace, so the CPU is used.  Set the threads with --nt.
+device = cpu
+
+; ---- size of the problem (memory ~ (6 + 2 x n-null) x (residues x K)^2 x 8 bytes) ----
+rse-components     = -1       ; choose K from the coverage ...
+rse-coverage       = 0.9
+rse-max-components = 12       ; ... but never more than 12 modes per residue
+n-null             = 32       ; time shifts of the null (64 = more precise, 2x memory)
+calibrate-coarse   = 4        ; calibrate 4 sizes and interpolate the rest
+
+; ---- search ----
+seed-fraction = 0.25          ; seeds <= 25% of the residues
+dec-seeds     = 32
+seed-group    = 2             ; start each growth from the seed + its strongest partner
+min-size      = 4

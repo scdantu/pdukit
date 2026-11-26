@@ -127,7 +127,13 @@ class SplitReplicasStage:
 
 
 class ScanWindowStage:
-    """Stage 2b: check that the high-pass window suits this lag."""
+    """Stage 2b: choose the high-pass window (``highpass-window = auto``).
+
+    The scan builds a workspace for each of several windows, so it costs
+    about as much time and memory as several runs of the null.  It is
+    needed only to CHOOSE the window; with a fixed window (or none) it is
+    skipped unless ``null-cal-check = 1`` asks for it as a check.
+    """
 
     code = "WIN"
 
@@ -135,7 +141,8 @@ class ScanWindowStage:
         """Advance ``state`` by this stage."""
         args, results = state.args, state.results
         hp = args.highpass_window
-        if not args.no_null_calibration and not args.planted:
+        wanted = hp == "auto" or getattr(args, "null_cal_check", False)
+        if wanted and not args.no_null_calibration and not args.planted:
             t = time.perf_counter()
             nc = WindowScan(args).run(state.feats, state.segments, state.adj)
             state.timings["null_calibration_seconds"] = time.perf_counter() - t
@@ -176,6 +183,14 @@ class ScanWindowStage:
                 "--highpass-window auto needs the null "
                 "calibration (MD data, without "
                 "--no-null-calibration)"
+            )
+        elif not args.planted:
+            log(
+                "high-pass window scan skipped: "
+                + (f"window fixed at {hp} frames" if int(hp or 0)
+                   else "high-pass off")
+                + " (highpass-window = auto chooses one; null-cal-check = 1 "
+                "runs the scan as a check)"
             )
         state.hp = int(hp or 0)
 

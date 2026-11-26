@@ -3,7 +3,7 @@
 ; edit by hand.  Copy it, delete the lines you do not change and use it with
 ; `pdu run -p my.ppf ...`.  Precedence: command line, then this file, then
 ; the built-in default.  Settings that describe a run rather than the
-; science (files, output folder, device) are not listed.  The full text of
+; science (files, output folder, threads) are not listed.  The full text of
 ; each setting is in docs/OPTIONS.md.
 
 ; ---- files and general options ----
@@ -89,6 +89,10 @@ backend = flux
 ; only) or out (outgoing only) [max, sum, in, out]
 combine = max
 
+; where the estimator runs: auto (CUDA GPU when torch can use one, else
+; CPU), cuda, cpu or mps
+device = auto
+
 ; skip the check, before each workspace is built, that it fits in the free
 ; RAM (and GPU memory); the check stops the run with advice instead of
 ; letting it be killed
@@ -159,8 +163,14 @@ skip-frames = 0
 ; of the lowest in the null calibration scan)
 highpass-window = 0
 
-; skip the highpass-window scan before discovery
+; never run the highpass-window scan, not even for highpass-window = auto
+; (which then stops with an error)
 no-null-calibration = 0
+
+; run the highpass-window scan even when the window is fixed or off, as a
+; check (it is always run for highpass-window = auto); costs about one
+; workspace per window tried
+null-cal-check = 0
 
 ; comma list of windows (frames) to scan; 'auto' = geometric from 10 x lag
 ; to a replica / 8

@@ -157,3 +157,43 @@ def test_available_memory_is_known_here():
 
     free = available_memory()
     assert free is None or free > 0
+
+
+@pytest.mark.parametrize("name, slow", [
+    ("NVIDIA GeForce RTX 3070", True),
+    ("NVIDIA RTX A6000", True),
+    ("NVIDIA RTX A3000 Laptop GPU", True),
+    ("AMD Instinct MI250X", False),
+    ("NVIDIA GH200 120GB", False),
+    ("NVIDIA A100-SXM4-80GB", False),
+    (None, False),
+])
+def test_slow_double_precision_gpus_are_named(name, slow):
+    note = backend.fp64_note(name)
+    assert (note is not None) == slow
+    if slow:
+        assert note.startswith("!!") and "device=cpu" in note
+
+
+def test_options_guide_names_real_settings_and_every_group():
+    from pdukit.config import SETTINGS, guide
+
+    keys = {row[1] for row in SETTINGS}
+    assert [k for k, _ in guide.START_HERE if k not in keys] == []
+    assert {row[0] for row in SETTINGS} == set(guide.GROUP_INTRO)
+
+
+def test_a_shipped_preset_can_be_named_without_its_path(tmp_path,
+                                                        monkeypatch):
+    from pdukit.cli.arguments import shipped_preset
+
+    monkeypatch.chdir(tmp_path)
+    for name in ("workstation", "workstation.ppf"):
+        assert shipped_preset(name).endswith("params/workstation.ppf")
+    assert shipped_preset("t4l_final_tau1ns").endswith(
+        "final/t4l_final_tau1ns.ppf")
+    (tmp_path / "workstation.ppf").write_text("lag = 3\n")
+    assert shipped_preset("workstation.ppf") == "workstation.ppf"
+    assert shipped_preset("nothing-like-this") == "nothing-like-this"
+    cfg, _ = parse_run(["-p", "workstation", "--planted", "-o", "o"])
+    assert cfg.device == "cpu" and cfg.rse_max_components == 12

@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+from pathlib import Path
 
 from pdukit.config.config import _ROWS, Config, ConfigError, normalise_key
 
@@ -31,7 +32,8 @@ def build_parser(description, prog="pdu run"):
                     help="topology file (PDB, GRO, TPR)")
     ap.add_argument("-p", "--ppf", "--params", metavar="FILE",
                     help="parameter file (key = value); the place for "
-                    "nearly every setting")
+                    "nearly every setting.  A shipped preset can be named "
+                    "without its path: -p workstation")
     ap.add_argument("-o", "--out", "--outdir", metavar="DIR",
                     help="output folder")
     ap.add_argument("--nt", "-nt", type=int, metavar="N",
@@ -47,6 +49,26 @@ def build_parser(description, prog="pdu run"):
                     help="print the resolved settings and where each came "
                     "from; run nothing")
     return ap
+
+
+def shipped_preset(name):
+    """Return the path of ``name`` if it is not a file but a shipped preset.
+
+    ``-p workstation`` (or ``workstation.ppf``) finds
+    ``pdukit/params/workstation.ppf`` when there is no such file here, so
+    the presets can be used without knowing where pip installed them.
+    """
+    if not name or Path(name).exists():
+        return name
+    stem = Path(name).name
+    stem = stem if stem.endswith(".ppf") else stem + ".ppf"
+    params = Path(__file__).resolve().parents[1] / "params"
+    hits = [params / stem] + sorted(params.glob(f"*/{stem}"))
+    for hit in hits:
+        if hit.is_file():
+            sys.stderr.write(f"pdu: using the shipped preset {hit}\n")
+            return str(hit)
+    return name
 
 
 def _legacy(tokens):
@@ -90,6 +112,7 @@ def parse_run(argv, description="pdu run: detect protein dynamical units",
     """Return ``(options, args)``; exit with a message on bad settings."""
     ap = build_parser(description, prog)
     args, rest = ap.parse_known_args(argv)
+    args.ppf = shipped_preset(args.ppf)
     try:
         sets = _legacy(rest)
         if planted:

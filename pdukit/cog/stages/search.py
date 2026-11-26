@@ -10,7 +10,7 @@ from pdukit.cog.calibration.scorer import calibrate_cog2
 from pdukit.cog.features import coarse_sizes
 from pdukit.cog.runinfo import _parse_sizes
 from pdukit.cog.scoring import scorer as flux_scorer
-from pdukit.cog.scoring.backend import gpu_note
+from pdukit.cog.scoring.backend import fp64_note, gpu_name, gpu_note
 from pdukit.cog.scoring.factory import (
     build_workspace,
     check_memory,
@@ -48,6 +48,8 @@ class BuildWorkspaceStage:
             f"{state.timings['workspace_seconds']:.1f}s"
         )
         note = gpu_note(args.device, ws.device)
+        if ws.device == "cuda":
+            note = fp64_note(gpu_name())
         if note:
             log(note)
 

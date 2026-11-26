@@ -1,4 +1,4 @@
-# pdu — COG (v1.0.5a2)
+# pdu — COG (v1.0.5a3)
 
 > **Alpha release.** The method and the code are under active development; interfaces, output
 > formats and defaults may change before v1.0. Internally this is algorithm lineage "COG 2.1".
@@ -8,7 +8,7 @@ residues whose motions are coupled to each other more strongly than to the rest 
 protein, at a chosen lag time and for chosen per-residue features. It uses dynamics only;
 spatial contacts are not used in the search or in the baselines.
 
-This repository is the alpha pre-release (`v1.0.5a2`) of the COG pipeline (`pdukit` Python package).
+This repository is the alpha pre-release (`v1.0.5a3`) of the COG pipeline (`pdukit` Python package).
 It is the code behind the T4 lysozyme and synaptotagmin-1 C2A analyses.
 
 Every unit is scored two ways:
@@ -57,6 +57,12 @@ CUDA 12.1: `pip install "torch<2.6" --index-url https://download.pytorch.org/whl
 (see pytorch.org for other versions). `device = auto` (the default) then uses the GPU; the log
 line `WSP ... backend torch on cuda` confirms it, and a `!!` warning says why when a GPU is
 present but not used. The feature step always runs on the CPU.
+
+**Workstation (32-64 GB RAM, consumer GPU such as an RTX 3070, or none).** Start from the
+`workstation` preset: `pdu check -p workstation > my.ppf`, set `frame-ps`, `lag` and
+`highpass-window` in it, then `pdu run -p my.ppf ... --nt 8`. It runs on the CPU (consumer GPUs
+are slow in double precision) and fits a 400-residue protein in about 16 GB. Memory, time and
+GPU notes are in [`docs/OPTIONS.md`](docs/OPTIONS.md#memory-time-and-where-to-run).
 
 ## Quick check on a planted system (minutes, CPU)
 

@@ -1,4 +1,4 @@
-; Incoming-only growth. Same distance features, lag and filtering as prior runs.
+; Synaptotagmin-1 C2A (100 ps frames, lag 5 = 500 ps): incoming-only growth. Same distance features, lag and filtering as prior runs.
 ; Incoming-only growth, recursive within-parent cohesion splitting, global-mode recovery.
 seed = 0
 frames         = 0
