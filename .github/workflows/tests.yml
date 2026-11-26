@@ -8,9 +8,13 @@ jobs:
         python-version: ["3.10", "3.11", "3.12"]
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # setuptools-scm reads the version from git tags
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
       - run: pip install -e ".[dev]"
       - run: ruff check pdukit
+      - run: lint-imports
       - run: pytest
+      - run: pytest --nbmake examples/quickstart.ipynb

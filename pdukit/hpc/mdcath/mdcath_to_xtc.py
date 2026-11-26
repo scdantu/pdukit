@@ -4,7 +4,7 @@ mdCATH stores every domain as an HDF5 file with five temperatures and five
 replicas.  ``pdu run`` reads XTC files plus a topology, so this script writes
 ``topology.pdb`` and ``rep_<k>.xtc`` for the chosen temperature.
 
-The HDF5 layout is read through ``pdukit.lib.pdu.extract.hdf5_layout``, the
+The HDF5 layout is read through ``pdukit.io.mdcath.layout``, the
 one module that knows it.  That layout was written from the paper and has not
 been checked against a real file, so on first use run::
 
@@ -26,7 +26,8 @@ import sys
 from pathlib import Path
 
 import numpy as np
-from pdukit.lib.pdu.extract import hdf5_layout as hl
+
+from pdukit.io.mdcath import layout as hl
 
 
 def fetch(domain: str, cache: Path) -> Path:
@@ -108,8 +109,15 @@ def file_elements(dg):
     return [x.decode() if isinstance(x, bytes) else str(x) for x in raw]
 
 
-def convert(path: Path, domain: str, temperature: str, replicates: list[str],
-            out: Path, dt_ns: float, heavy_only: bool) -> dict:
+def convert(
+    path: Path,
+    domain: str,
+    temperature: str,
+    replicates: list[str],
+    out: Path,
+    dt_ns: float,
+    heavy_only: bool,
+) -> dict:
     """Write topology.pdb and one XTC per replicate; return a summary."""
     import mdtraj as md
 
@@ -119,8 +127,9 @@ def convert(path: Path, domain: str, temperature: str, replicates: list[str],
         dg = hl.domain_group(f, domain)
         pdb_text = hl.read_pdb_text(dg)
         if pdb_text is None:
-            raise SystemExit("no PDB text in the file; check "
-                             "hdf5_layout.DS_PDB_ALIASES")
+            raise SystemExit(
+                "no PDB text in the file; check hdf5_layout.DS_PDB_ALIASES"
+            )
         (out / "full.pdb").write_text(pdb_text)
         top_full = md.load_pdb(str(out / "full.pdb")).topology
         tg = hl.temperature_group(dg, temperature)
@@ -128,33 +137,56 @@ def convert(path: Path, domain: str, temperature: str, replicates: list[str],
         n_coord = hl.replicate_group(tg, avail[0])["coords"].shape[1]
         idx = protein_indices(top_full, n_coord, file_elements(dg))
         top_prot = top_full.subset(idx)
-        keep = np.array([i for i, a in enumerate(top_prot.atoms)
-                         if not (heavy_only and a.element is not None
-                                 and a.element.symbol == "H")])
+        keep = np.array(
+            [
+                i
+                for i, a in enumerate(top_prot.atoms)
+                if not (
+                    heavy_only
+                    and a.element is not None
+                    and a.element.symbol == "H"
+                )
+            ]
+        )
         top = top_prot.subset(keep)
         frames = {}
+        first = None
         for r in replicates:
             if str(r) not in avail:
                 print(f"replicate {r} missing (have {avail}); skipped")
                 continue
-            xyz = hl.read_coords(hl.replicate_group(tg, r))      # Angstrom
+            xyz = hl.read_coords(hl.replicate_group(tg, r))  # Angstrom
             if xyz.shape[1] != n_coord:
-                raise SystemExit(f"replicate {r} has {xyz.shape[1]} atoms, "
-                                 f"expected {n_coord}")
-            xyz = xyz[:, keep, :] / 10.0                          # nm
-            times = np.arange(xyz.shape[0]) * dt_ns * 1000.0      # ps
+                raise SystemExit(
+                    f"replicate {r} has {xyz.shape[1]} atoms, "
+                    f"expected {n_coord}"
+                )
+            xyz = xyz[:, keep, :] / 10.0  # nm
+            times = np.arange(xyz.shape[0]) * dt_ns * 1000.0  # ps
             traj = md.Trajectory(xyz.astype(np.float32), top, time=times)
             traj.save_xtc(str(out / f"rep_{r}.xtc"))
+            if first is None:
+                first = xyz[:1].astype(np.float32)
             frames[str(r)] = int(xyz.shape[0])
-    sub = md.Trajectory(np.zeros((1, top.n_atoms, 3), np.float32), top)
+    # first frame of the first replica, so the topology has real coordinates
+    # (before 27 Oct 2026 this file had zero coordinates)
+    if first is None:
+        first = np.zeros((1, top.n_atoms, 3), np.float32)
+    sub = md.Trajectory(first, top)
     sub.save_pdb(str(out / "topology.pdb"))
     (out / "full.pdb").unlink()
-    info = {"domain": domain, "temperature": str(temperature),
-            "dt_ns": dt_ns, "frames_per_replicate": frames,
-            "n_atoms": int(top.n_atoms),
-            "n_residues": int(top.n_residues), "heavy_atoms_only": heavy_only,
-            "pdb_atoms_in_file": int(top_full.n_atoms),
-            "coord_atoms_in_file": int(n_coord), "source": str(path)}
+    info = {
+        "domain": domain,
+        "temperature": str(temperature),
+        "dt_ns": dt_ns,
+        "frames_per_replicate": frames,
+        "n_atoms": int(top.n_atoms),
+        "n_residues": int(top.n_residues),
+        "heavy_atoms_only": heavy_only,
+        "pdb_atoms_in_file": int(top_full.n_atoms),
+        "coord_atoms_in_file": int(n_coord),
+        "source": str(path),
+    }
     (out / "conversion.json").write_text(json.dumps(info, indent=2))
     return info
 
@@ -170,8 +202,12 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--replicates", default="0,1,2,3,4")
     p.add_argument("--dt-ns", type=float, default=1.0)
     p.add_argument("--keep-hydrogens", action="store_true")
-    p.add_argument("--inspect", type=Path, metavar="H5",
-                   help="print the structure of a file and stop")
+    p.add_argument(
+        "--inspect",
+        type=Path,
+        metavar="H5",
+        help="print the structure of a file and stop",
+    )
     return p
 
 
@@ -184,9 +220,15 @@ def main(argv=None) -> int:
     if not args.domain or not args.out:
         raise SystemExit("give a domain and -o OUT (or --inspect FILE)")
     path = args.h5 or fetch(args.domain, args.cache)
-    info = convert(path, args.domain, args.temperature,
-                   args.replicates.split(","), args.out, args.dt_ns,
-                   not args.keep_hydrogens)
+    info = convert(
+        path,
+        args.domain,
+        args.temperature,
+        args.replicates.split(","),
+        args.out,
+        args.dt_ns,
+        not args.keep_hydrogens,
+    )
     print(json.dumps(info, indent=2))
     return 0
 

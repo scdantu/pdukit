@@ -1,0 +1,30 @@
+# 36-residue suite: hierarchy, fast-mode speed x lag
+# one run per line: <run name> <setting=value ...>   (run_suite.sh)
+S4v2_rf0.6_g0_lag1 bench-design=small-hierarchy bench-seed=0 design-rho-fast=0.6 lag=1
+S4v2_rf0.6_g0_lag2 bench-design=small-hierarchy bench-seed=0 design-rho-fast=0.6 lag=2
+S4v2_rf0.6_g0_lag4 bench-design=small-hierarchy bench-seed=0 design-rho-fast=0.6 lag=4
+S4v2_rf0.6_g0_lag8 bench-design=small-hierarchy bench-seed=0 design-rho-fast=0.6 lag=8
+S4v2_rf0.6_g0_lag16 bench-design=small-hierarchy bench-seed=0 design-rho-fast=0.6 lag=16
+S4v2_rf0.6_g0_lag32 bench-design=small-hierarchy bench-seed=0 design-rho-fast=0.6 lag=32
+S4v2_rf0.6_g0_lag64 bench-design=small-hierarchy bench-seed=0 design-rho-fast=0.6 lag=64
+S4v2_rf0.6_g1_lag1 bench-design=small-hierarchy bench-seed=1 design-rho-fast=0.6 lag=1
+S4v2_rf0.6_g1_lag2 bench-design=small-hierarchy bench-seed=1 design-rho-fast=0.6 lag=2
+S4v2_rf0.6_g1_lag4 bench-design=small-hierarchy bench-seed=1 design-rho-fast=0.6 lag=4
+S4v2_rf0.6_g1_lag8 bench-design=small-hierarchy bench-seed=1 design-rho-fast=0.6 lag=8
+S4v2_rf0.6_g1_lag16 bench-design=small-hierarchy bench-seed=1 design-rho-fast=0.6 lag=16
+S4v2_rf0.6_g1_lag32 bench-design=small-hierarchy bench-seed=1 design-rho-fast=0.6 lag=32
+S4v2_rf0.6_g1_lag64 bench-design=small-hierarchy bench-seed=1 design-rho-fast=0.6 lag=64
+S4v2_rf0.8_g0_lag1 bench-design=small-hierarchy bench-seed=0 design-rho-fast=0.8 lag=1
+S4v2_rf0.8_g0_lag2 bench-design=small-hierarchy bench-seed=0 design-rho-fast=0.8 lag=2
+S4v2_rf0.8_g0_lag4 bench-design=small-hierarchy bench-seed=0 design-rho-fast=0.8 lag=4
+S4v2_rf0.8_g0_lag8 bench-design=small-hierarchy bench-seed=0 design-rho-fast=0.8 lag=8
+S4v2_rf0.8_g0_lag16 bench-design=small-hierarchy bench-seed=0 design-rho-fast=0.8 lag=16
+S4v2_rf0.8_g0_lag32 bench-design=small-hierarchy bench-seed=0 design-rho-fast=0.8 lag=32
+S4v2_rf0.8_g0_lag64 bench-design=small-hierarchy bench-seed=0 design-rho-fast=0.8 lag=64
+S4v2_rf0.8_g1_lag1 bench-design=small-hierarchy bench-seed=1 design-rho-fast=0.8 lag=1
+S4v2_rf0.8_g1_lag2 bench-design=small-hierarchy bench-seed=1 design-rho-fast=0.8 lag=2
+S4v2_rf0.8_g1_lag4 bench-design=small-hierarchy bench-seed=1 design-rho-fast=0.8 lag=4
+S4v2_rf0.8_g1_lag8 bench-design=small-hierarchy bench-seed=1 design-rho-fast=0.8 lag=8
+S4v2_rf0.8_g1_lag16 bench-design=small-hierarchy bench-seed=1 design-rho-fast=0.8 lag=16
+S4v2_rf0.8_g1_lag32 bench-design=small-hierarchy bench-seed=1 design-rho-fast=0.8 lag=32
+S4v2_rf0.8_g1_lag64 bench-design=small-hierarchy bench-seed=1 design-rho-fast=0.8 lag=64

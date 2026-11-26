@@ -9,7 +9,19 @@ dist/
 .venv/
 venv/
 # run outputs and caches
-results/
+/results/
 cache/
 logs/
 *.npz
+
+# docs/: only the tutorial and the generated options reference are published
+docs/*
+!docs/TUTORIAL.md
+!docs/OPTIONS.md
+
+# scratch analyses and old code live outside the repo (old code: archive/* git tags)
+/analysis/
+/archive/
+
+# written by setuptools-scm at install time
+pdukit/_version.py

@@ -1,0 +1,115 @@
+; planted fast test (6 units x 6 residues, 2 replicas x 3000 frames); reference at 7acf4cf: core 25, port 5, loose 6, 5 units
+
+; ---- files and general options ----
+seed = 1
+
+; ---- planted benchmark ----
+planted            = 1
+n-units            = 6
+unit-size          = 6
+planted-m          = 4
+latent-dim         = 5
+frames-per-replica = 3000
+n-replicas         = 2
+coupling-gain      = 0.35
+face-residues      = 1
+decoy-pairs        = 3-4  ; comma list like '3-4' of uncoupled adjacent units
+discontinuous      = 0
+bench-seed         = 0
+scatter            = 0  ; permute planted residue positions so units are not spatially ...
+
+; ---- MD data ----
+frames         = 0  ; first N frames per replica (0 = all)
+stride         = 1
+rse-cutoff     = 15.0
+rse-components = 8
+min-seq-sep    = 2
+contact-cutoff = 8.0
+pair-features  = 0  ; add pair-owned contact-distance features (Stage 4)
+pair-cutoff    = 8.0
+
+; ---- estimator ----
+lag        = 1
+unit-dim   = 8
+env-dim    = 20
+ridge      = 0.01
+n-null     = 64
+shift-mode = auto
+backend    = flux
+combine    = max
+cond-unit  = full  ; unit's present subtracted whole (COG 2.1) or as unit_dim slow ...
+cond-env   = full  ; environment's present subtracted whole ('full'), as N slow modes ...
+
+; ---- calibration ----
+sizes            = 2-14  ; calibration sizes, e.g.
+target-rel-width = 0.03
+min-supports     = 40
+max-supports     = 300
+batch-supports   = 32  ; calibration supports scored per batch
+calibrate-only   = 0  ; stop after the calibration (to check thetas, the baseline and the ...
+
+; ---- discovery ----
+no-center-replicas       = 0  ; keep each replica's mean (v1.0 behaviour);
+highpass-before-features = 0  ; apply --highpass-window to the raw neighbour distances BEFORE each ...
+fit                      = 0  ; remove overall rotation and translation (Kabsch) before building ...
+calibrate-coarse         = 0  ; calibrate only ~N sizes spread over the range and interpolate the ...
+skip-frames              = 0  ; drop the first N frames of every replica
+highpass-window          = 0  ; remove a running mean of this many frames within every replica (0 ...
+no-null-calibration      = 0  ; skip the highpass-window scan before discovery
+null-cal-windows         = auto  ; comma list of windows (frames) to scan;
+null-cal-n-windows       = 6
+null-cal-sizes           = 3,10
+null-cal-supports        = 48
+null-cal-n-null          = 32
+null-cal-target          = 0.06  ; largest acceptable null threshold (theta_in and theta_out);
+seeding                  = random  ; 'random' = N residues drawn at random (dynamics only);
+search-graph             = predictive  ; graph used everywhere a neighbourhood is needed (growth, round 2, ...
+baseline                 = graph  ; comparison regions for the cost baseline:
+graph-k                  = 5  ; strongest predictive partners kept per residue
+graph-null-shifts        = 16
+rho-min                  = 0.0  ; minimum channel strength:
+block-us                 = 1.0  ; block length in us (MD data)
+block-frames             = 0  ; block length in frames (planted data;
+faces                    = 0  ; cores and faces:
+no-ledger                = 0  ; do not record the per-residue ledger
+resolve                  = 0  ; second round for residues in groups with cost > 0:
+stability                = 0  ; after round 2:
+grow-objective           = incoming  ; channels (default, COG 2.1 stable):
+incoming-min-gain        = 0.0  ; incoming growth:
+incoming-postprocess     = split  ; incoming growth:
+split-method             = recursive-spectral  ; within-parent cut proposal after incoming-only growth
+split-markov-time        = 16.0  ; graph diffusion time, separate from the MD lag
+split-test               = both  ; graph-exchangeability null and/or selected-cut block bootstrap
+split-null               = 39  ; reciprocal-dyad graph nulls;
+split-alpha              = 0.05
+split-max-depth          = 8
+port-z                   = 1.645  ; ports:
+mode-units               = extended  ; units given to global-mode recovery after splitting:
+merge-overlap            = 0.5  ; incoming split path:
+cohesion-boot            = 8  ; bootstrap resamples for the cohesion noise margin
+cohesion-blocks          = 20  ; at least this many blocks (whole replicas if there are enough, ...
+null-cal-tol             = 0.15  ; 'auto' window = the smallest window whose null threshold is within ...
+null-cal-max-replicas    = 20  ; scan on at most this many replicas (evenly spaced)
+frame-ps                 = 0.0  ; time per frame in ps, for the logs only
+batched                  = auto  ; score candidates in batches on the GPU engine (auto:
+env-basis                = exact  ; 'ritz' = environment slow basis from the global slow modes + block ...
+no-feature-cache         = 0
+no-replica-overlap       = 0  ; skip the tICA check of whether replicas visit the same states
+dec-seeds                = 16
+max-size                 = 14
+min-size                 = 3
+max-unit                 = 14
+add-gate                 = ratio  ; ratio:
+n-controls               = 8
+
+; ---- verification ----
+verify-lags  = 1,5,25
+verify-null  = 32
+
+; ---- global-mode recovery ----
+mode-recovery             = on
+recovery-modes            = 4
+recovery-local-dim        = 0  ; local slow coordinates per PDU;
+recovery-channel-ranks    = 1,2,4  ; incoming-rank ablation budgets;
+recovery-combinations     = auto  ; auto:
+recovery-max-combinations = 256

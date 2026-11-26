@@ -1,0 +1,26 @@
+# 36-residue suite: growth seeds and observation noise, no channels
+# one run per line: <run name> <setting=value ...>   (run_suite.sh)
+S5_g0_noise0.1_seeds4 bench-design=small-nocomm bench-seed=0 design-obs-noise=0.1 lag=1 dec-seeds=4
+S5_g1_noise0.1_seeds4 bench-design=small-nocomm bench-seed=1 design-obs-noise=0.1 lag=1 dec-seeds=4
+S5_g0_noise0.1_seeds16 bench-design=small-nocomm bench-seed=0 design-obs-noise=0.1 lag=1 dec-seeds=16
+S5_g1_noise0.1_seeds16 bench-design=small-nocomm bench-seed=1 design-obs-noise=0.1 lag=1 dec-seeds=16
+S5_g0_noise0.1_seeds64 bench-design=small-nocomm bench-seed=0 design-obs-noise=0.1 lag=1 dec-seeds=64
+S5_g1_noise0.1_seeds64 bench-design=small-nocomm bench-seed=1 design-obs-noise=0.1 lag=1 dec-seeds=64
+S5_g0_noise0.25_seeds4 bench-design=small-nocomm bench-seed=0 design-obs-noise=0.25 lag=1 dec-seeds=4
+S5_g1_noise0.25_seeds4 bench-design=small-nocomm bench-seed=1 design-obs-noise=0.25 lag=1 dec-seeds=4
+S5_g0_noise0.25_seeds16 bench-design=small-nocomm bench-seed=0 design-obs-noise=0.25 lag=1 dec-seeds=16
+S5_g1_noise0.25_seeds16 bench-design=small-nocomm bench-seed=1 design-obs-noise=0.25 lag=1 dec-seeds=16
+S5_g0_noise0.25_seeds64 bench-design=small-nocomm bench-seed=0 design-obs-noise=0.25 lag=1 dec-seeds=64
+S5_g1_noise0.25_seeds64 bench-design=small-nocomm bench-seed=1 design-obs-noise=0.25 lag=1 dec-seeds=64
+S5_g0_noise0.5_seeds4 bench-design=small-nocomm bench-seed=0 design-obs-noise=0.5 lag=1 dec-seeds=4
+S5_g1_noise0.5_seeds4 bench-design=small-nocomm bench-seed=1 design-obs-noise=0.5 lag=1 dec-seeds=4
+S5_g0_noise0.5_seeds16 bench-design=small-nocomm bench-seed=0 design-obs-noise=0.5 lag=1 dec-seeds=16
+S5_g1_noise0.5_seeds16 bench-design=small-nocomm bench-seed=1 design-obs-noise=0.5 lag=1 dec-seeds=16
+S5_g0_noise0.5_seeds64 bench-design=small-nocomm bench-seed=0 design-obs-noise=0.5 lag=1 dec-seeds=64
+S5_g1_noise0.5_seeds64 bench-design=small-nocomm bench-seed=1 design-obs-noise=0.5 lag=1 dec-seeds=64
+S1_g0_noise0.25_seeds4 bench-design=small-units bench-seed=0 design-obs-noise=0.25 lag=1 dec-seeds=4
+S1_g1_noise0.25_seeds4 bench-design=small-units bench-seed=1 design-obs-noise=0.25 lag=1 dec-seeds=4
+S1_g0_noise0.25_seeds16 bench-design=small-units bench-seed=0 design-obs-noise=0.25 lag=1 dec-seeds=16
+S1_g1_noise0.25_seeds16 bench-design=small-units bench-seed=1 design-obs-noise=0.25 lag=1 dec-seeds=16
+S1_g0_noise0.25_seeds64 bench-design=small-units bench-seed=0 design-obs-noise=0.25 lag=1 dec-seeds=64
+S1_g1_noise0.25_seeds64 bench-design=small-units bench-seed=1 design-obs-noise=0.25 lag=1 dec-seeds=64

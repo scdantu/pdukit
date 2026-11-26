@@ -1,4 +1,9 @@
-"""Collect pdu results of many mdCATH domains into one table.
+"""LEGACY: collect old COG 2.1 mdCATH results (<domain>/pdu/).
+
+For runs of the current
+pipeline (<domain>/pdu_incoming_*/) use analysis/mdcath/summarise_batch.py.
+
+Collect pdu results of many mdCATH domains into one table.
 
     python collect_results.py RESULTS_ROOT --selected mdcath_selected.tsv
 
@@ -41,8 +46,11 @@ def main(argv=None) -> int:
     args = p.parse_args(argv)
     sel = read_selected(args.selected)
     rows, missing = [], []
-    for d in sorted(sel) if sel else sorted(
-            x.name for x in args.root.iterdir() if x.is_dir()):
+    for d in (
+        sorted(sel)
+        if sel
+        else sorted(x.name for x in args.root.iterdir() if x.is_dir())
+    ):
         f = args.root / d / "pdu" / "results.json"
         if not f.exists():
             missing.append(d)
@@ -53,14 +61,19 @@ def main(argv=None) -> int:
         covered = len({r for u in units for r in u})
         sizes = [len(u) for u in units]
         s = sel.get(d, {})
-        rows.append({
-            "domain": d, "class": s.get("class", ""),
-            "architecture": s.get("architecture", ""),
-            "n_residues": n_res, "n_units": len(units),
-            "mean_unit_size": round(statistics.mean(sizes), 1) if sizes
-            else 0,
-            "covered_fraction": round(covered / n_res, 3) if n_res else "",
-        })
+        rows.append(
+            {
+                "domain": d,
+                "class": s.get("class", ""),
+                "architecture": s.get("architecture", ""),
+                "n_residues": n_res,
+                "n_units": len(units),
+                "mean_unit_size": round(statistics.mean(sizes), 1)
+                if sizes
+                else 0,
+                "covered_fraction": round(covered / n_res, 3) if n_res else "",
+            }
+        )
     fields = list(rows[0]) if rows else ["domain"]
     with args.csv.open("w", newline="") as fh:
         w = csv.DictWriter(fh, fieldnames=fields)
@@ -71,15 +84,21 @@ def main(argv=None) -> int:
         by[r["class"]].append(r)
     print(f"{len(rows)} domains with results, {len(missing)} missing")
     for c, rs in sorted(by.items()):
-        cov = [r["covered_fraction"] for r in rs
-               if r["covered_fraction"] != ""]
+        cov = [
+            r["covered_fraction"] for r in rs if r["covered_fraction"] != ""
+        ]
         med_cov = statistics.median(cov) if cov else "n/a"
         med_units = statistics.median(r["n_units"] for r in rs)
-        print(f"class {c or '?'}: n={len(rs)}  median units {med_units}  "
-              f"median coverage {med_cov}")
+        print(
+            f"class {c or '?'}: n={len(rs)}  median units {med_units}  "
+            f"median coverage {med_cov}"
+        )
     if missing:
-        print("missing:", " ".join(missing[:20]),
-              "..." if len(missing) > 20 else "")
+        print(
+            "missing:",
+            " ".join(missing[:20]),
+            "..." if len(missing) > 20 else "",
+        )
     return 0
 
 

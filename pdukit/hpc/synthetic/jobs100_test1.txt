@@ -1,0 +1,11 @@
+# Test 1: units vs no units (mixed readout, uniform medium); 3 systems each, lag 0.1 ns
+# one run per line: <run name> <setting=value ...>   (run_suite.sh)
+units_g0_lag1 bench-design=units bench-seed=0 lag=1
+units_g1_lag1 bench-design=units bench-seed=1 lag=1
+units_g2_lag1 bench-design=units bench-seed=2 lag=1
+mixed_g0_lag1 bench-design=mixed bench-seed=0 lag=1
+mixed_g1_lag1 bench-design=mixed bench-seed=1 lag=1
+mixed_g2_lag1 bench-design=mixed bench-seed=2 lag=1
+medium_g0_lag1 bench-design=medium bench-seed=0 lag=1
+medium_g1_lag1 bench-design=medium bench-seed=1 lag=1
+medium_g2_lag1 bench-design=medium bench-seed=2 lag=1

@@ -1,10 +1,10 @@
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools>=64", "setuptools-scm>=8"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "pdukit"
-version = "1.0.0a1"
+dynamic = ["version"]   # from the latest git tag (setuptools-scm)
 description = "COG: detect protein dynamical units (PDUs) from molecular dynamics trajectories"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -25,26 +25,31 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-gpu = ["torch>=2.3"]                    # batched GPU scoring (cog2_gpu); CPU path needs only numpy
-xtc = ["MDAnalysis>=2.5"]               # read XTC/DCD trajectories (cog2_run --xtc)
+gpu = ["torch>=2.3"]                    # batched GPU scoring (flux/engine_torch.py); CPU path needs only numpy
+xtc = ["MDAnalysis>=2.5"]               # read XTC/DCD trajectories (pdu run -f ... .xtc)
 mdcath = ["h5py>=3.9", "fsspec", "aiohttp"]   # mdCATH .h5 input
-dev = ["pytest>=7", "ruff"]
+plot = ["matplotlib>=3.7"]                 # pdu plot units / lag / network / compare / movie (movie also needs ffmpeg)
+notebook = ["pandas>=1.5", "py3Dmol>=2.0", "ipython", "matplotlib>=3.7"]   # Colab / Jupyter: result.table(), result.view()
+dev = ["pytest>=7", "ruff", "matplotlib>=3.7", "import-linter>=2.0", "pandas>=1.5", "MDAnalysis>=2.5", "nbmake", "py3Dmol>=2.0", "ipython"]
 
 [project.scripts]
-pdu = "pdukit.cli:main"
+pdu = "pdukit.cli.main:main"
 # older names, kept as aliases
-pdu-cog2 = "pdukit.lib.pdu.cog2_run:main"
-pdu-cog2-fasttest = "pdukit.lib.pdu.cog2_fasttest:main"
-pdu-cog2-summarise = "pdukit.lib.pdu.cog2_summarise:main"
+pdu-cog2 = "pdukit.cli.main:cog2_main"
+pdu-cog2-summarise = "pdukit.analysis.summary:main"
+
+[tool.setuptools_scm]
+version_file = "pdukit/_version.py"   # written at install; not committed
+tag_regex = "^v(?P<version>.+)$"
 
 [tool.setuptools.packages.find]
 include = ["pdukit*"]
 
 [tool.setuptools.package-data]
-pdukit = ["params/*.ppf"]
+pdukit = ["params/*.ppf", "params/tau_scan/*.ppf", "params/tau_scan/*.json"]
 
 [tool.pytest.ini_options]
-testpaths = ["pdukit/lib/pdu/tests"]
+testpaths = ["pdukit/tests"]
 addopts = "-ra"
 
 [tool.ruff]
@@ -66,7 +71,29 @@ convention = "pep257"
 
 [tool.ruff.lint.per-file-ignores]
 "**/tests/*" = ["D"]
+"pdukit/config/schema.py" = ["E501"]
+"pdukit/viz/*.py" = ["E501"]  # dense plotting layout
 
 [project.urls]
 Homepage = "https://github.com/scdantu/pdukit"
 Issues = "https://github.com/scdantu/pdukit/issues"
+
+[tool.importlinter]
+root_package = "pdukit"
+
+[[tool.importlinter.contracts]]
+name = "layers: higher packages may import lower ones, never the reverse"
+type = "layers"
+layers = [
+    "pdukit.cli",
+    "pdukit.runner",
+    "pdukit.result",
+    "pdukit.cog",
+    "pdukit.viz",
+    "pdukit.analysis",
+    "pdukit.config",
+    "pdukit.io",
+    "pdukit.model",
+    "pdukit.bench",
+    "pdukit.numerics",
+]

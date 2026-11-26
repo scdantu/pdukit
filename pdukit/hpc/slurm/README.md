@@ -1,6 +1,6 @@
 # Example Slurm scripts
 
-These scripts run COG 2.1 on a GPU node (developed on Isambard-AI, 1 GPU per task). Adapt them
+These scripts run the incoming mode of COG on a GPU node (developed on Isambard-AI, 1 GPU per task). Adapt them
 to your cluster.
 
 1. Create a virtual environment and `pip install -e ".[xtc,gpu]"` from the repository root.
@@ -12,15 +12,15 @@ to your cluster.
 4. The lysozyme script expects trajectories named `CONV-PROD-R<id>-ATM-110_129-<VARIANT>*.xtc`
    plus `ATM-110_129-<VARIANT>.tpr` in `MDDIR`; adapt the file-name pattern for your data.
 5. Submit with a parameter file (`PARAMS`; a `key = value` `.ppf` file, see the top-level
-   README). To change a setting for one job, pass it as options with `PDU_ARGS` (they override
+   README). To change a setting for one job, pass it as KEY=VALUE words in `PDU_ARGS` (they override
    the file); `MODE=calibrate` stops after calibration:
 
 ```bash
-sbatch --array=0 --export=ALL,PARAMS=pdukit/params/t4l_channels.ppf \
-       pdukit/hpc/slurm/submit_cog2_lysozyme.slurm
-sbatch --export=ALL,PARAMS=pdukit/params/syt_c2a_channels.ppf,PDU_ARGS="--lag 10" \
-       pdukit/hpc/slurm/submit_cog2_synaptotagmin.slurm
+sbatch --array=0 --export=ALL,PARAMS=pdukit/params/t4l_incoming.ppf \
+       pdukit/hpc/slurm/submit_incoming_lysozyme.slurm
+sbatch --export=ALL,PARAMS=pdukit/params/syt_c2a_incoming.ppf,PDU_ARGS="lag=10" \
+       pdukit/hpc/slurm/submit_incoming_synaptotagmin.slurm
 ```
 
-`submit_cog2_benchmark.slurm` and `submit_cog2_fasttest.slurm` run the planted-system tests.
-The `*_cohesion.ppf` files are experimental (cohesion as the optimisation objective).
+The scripts for the older channels and cohesion modes (`submit_cog2_*.slurm`, `*_channels.ppf`,
+`*_cohesion.ppf`, `lag1ns.ppf`) are in the git tag `archive/pre-incoming-only`.

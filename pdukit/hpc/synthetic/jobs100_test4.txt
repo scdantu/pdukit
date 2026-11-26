@@ -1,0 +1,12 @@
+# Test 4: units without channels need more growth seeds (8, 32, 128)
+# one run per line: <run name> <setting=value ...>   (run_suite.sh)
+nocomm_g0_seeds8 bench-design=nocomm bench-seed=0 lag=1 dec-seeds=8
+nocomm_g0_seeds32 bench-design=nocomm bench-seed=0 lag=1 dec-seeds=32
+nocomm_g0_seeds128 bench-design=nocomm bench-seed=0 lag=1 dec-seeds=128
+nocomm_g1_seeds8 bench-design=nocomm bench-seed=1 lag=1 dec-seeds=8
+nocomm_g1_seeds32 bench-design=nocomm bench-seed=1 lag=1 dec-seeds=32
+nocomm_g1_seeds128 bench-design=nocomm bench-seed=1 lag=1 dec-seeds=128
+units_g0_seeds8 bench-design=units bench-seed=0 lag=1 dec-seeds=8
+units_g0_seeds128 bench-design=units bench-seed=0 lag=1 dec-seeds=128
+units_g1_seeds8 bench-design=units bench-seed=1 lag=1 dec-seeds=8
+units_g1_seeds128 bench-design=units bench-seed=1 lag=1 dec-seeds=128

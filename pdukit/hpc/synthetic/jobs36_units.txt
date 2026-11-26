@@ -1,0 +1,14 @@
+# 36-residue suite: units, mixed, medium, nocomm
+# one run per line: <run name> <setting=value ...>   (run_suite.sh)
+S1_g0_lag1 bench-design=small-units bench-seed=0 lag=1
+S1_g1_lag1 bench-design=small-units bench-seed=1 lag=1
+S1_g2_lag1 bench-design=small-units bench-seed=2 lag=1
+S2_g0_lag1 bench-design=small-mixed bench-seed=0 lag=1
+S2_g1_lag1 bench-design=small-mixed bench-seed=1 lag=1
+S2_g2_lag1 bench-design=small-mixed bench-seed=2 lag=1
+S3_g0_lag1 bench-design=small-medium bench-seed=0 lag=1
+S3_g1_lag1 bench-design=small-medium bench-seed=1 lag=1
+S3_g2_lag1 bench-design=small-medium bench-seed=2 lag=1
+S5_g0_lag1 bench-design=small-nocomm bench-seed=0 lag=1
+S5_g1_lag1 bench-design=small-nocomm bench-seed=1 lag=1
+S5_g2_lag1 bench-design=small-nocomm bench-seed=2 lag=1

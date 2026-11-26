@@ -2,6 +2,6 @@
 
 import sys
 
-from .cli import main
+from pdukit.cli.main import main
 
 sys.exit(main())

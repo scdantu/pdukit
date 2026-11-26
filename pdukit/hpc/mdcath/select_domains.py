@@ -20,6 +20,11 @@ Selection:
    then a Homologous superfamily not used yet; never two domains from the same
    homologous superfamily, so the set is not dominated by one family.
 
+With ``--all`` there is no quota and no family filter: every mdCATH domain is
+written (length filter only if --min-len/--max-len are given); a domain
+without a CATH record gets empty class columns, so the screen covers the
+whole dataset.
+
 The result is a tab-separated file that the Slurm array script reads.
 """
 
@@ -97,16 +102,74 @@ def pick(cands: list[str], info: dict, quota: int, rng: random.Random):
     return chosen
 
 
+def write_all(args, domains: list[str], cath: dict) -> int:
+    """Write every mdCATH domain (``--all``), with CATH columns where known."""
+    lo = args.min_len if args.min_len is not None else 0
+    hi = args.max_len if args.max_len is not None else 10**9
+    rows, no_cath, cut = [], 0, 0
+    for d in domains:
+        c = cath.get(d)
+        if c is None:
+            no_cath += 1
+            rows.append([d, "", "", "", "", ""])
+            continue
+        if not lo <= c["length"] <= hi:
+            cut += 1
+            continue
+        rows.append([d, c["C"], c["A"], c["T"], c["H"], c["length"]])
+    with args.out.open("w", newline="") as fh:
+        w = csv.writer(fh, delimiter="\t")
+        w.writerow(
+            [
+                "domain",
+                "class",
+                "architecture",
+                "topology",
+                "homology",
+                "length",
+            ]
+        )
+        w.writerows(rows)
+    by = defaultdict(int)
+    for r in rows:
+        by[r[1] or "none"] += 1
+    print(
+        f"mdCATH domains {len(domains)}; without CATH record {no_cath}; "
+        f"outside length range {cut}"
+    )
+    print(
+        "per class: " + ", ".join(f"{k}: {v}" for k, v in sorted(by.items()))
+    )
+    print(f"wrote {len(rows)} domains to {args.out}")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     """Return the command-line parser."""
     p = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     p.add_argument("--mdcath-list", type=Path, required=True)
     p.add_argument("--cath-list", type=Path, required=True)
     p.add_argument("-o", "--out", type=Path, default=Path("selected.tsv"))
-    p.add_argument("--quota", default="1:30,2:30,3:30,4:10",
-                   help="class:count pairs")
-    p.add_argument("--min-len", type=int, default=80)
-    p.add_argument("--max-len", type=int, default=250)
+    p.add_argument(
+        "--quota", default="1:30,2:30,3:30,4:10", help="class:count pairs"
+    )
+    p.add_argument(
+        "--min-len",
+        type=int,
+        default=None,
+        help="default 80 (quota mode) or no limit (--all)",
+    )
+    p.add_argument(
+        "--max-len",
+        type=int,
+        default=None,
+        help="default 250 (quota mode) or no limit (--all)",
+    )
+    p.add_argument(
+        "--all",
+        action="store_true",
+        help="write every mdCATH domain (no quota, no family filter)",
+    )
     p.add_argument("--seed", type=int, default=0)
     return p
 
@@ -114,15 +177,27 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv=None) -> int:
     """Write the selection table and print a summary."""
     args = build_parser().parse_args(argv)
-    quota = {k: int(v) for k, v in
-             (x.split(":") for x in args.quota.split(","))}
+    quota = {
+        k: int(v) for k, v in (x.split(":") for x in args.quota.split(","))
+    }
     in_md = set(read_domain_list(args.mdcath_list))
     cath = read_cath(args.cath_list)
-    info = {d: cath[d] for d in in_md if d in cath
-            and args.min_len <= cath[d]["length"] <= args.max_len}
+    if args.all:
+        return write_all(args, sorted(in_md), cath)
+    if args.min_len is None:
+        args.min_len = 80
+    if args.max_len is None:
+        args.max_len = 250
+    info = {
+        d: cath[d]
+        for d in in_md
+        if d in cath and args.min_len <= cath[d]["length"] <= args.max_len
+    }
     missing = len(in_md) - sum(d in cath for d in in_md)
-    print(f"mdCATH domains {len(in_md)}; with CATH record "
-          f"{len(in_md) - missing}; in length range {len(info)}")
+    print(
+        f"mdCATH domains {len(in_md)}; with CATH record "
+        f"{len(in_md) - missing}; in length range {len(info)}"
+    )
     by_class = defaultdict(list)
     for d, c in info.items():
         by_class[c["C"]].append(d)
@@ -130,13 +205,23 @@ def main(argv=None) -> int:
     rows = []
     for cls, n in sorted(quota.items()):
         got = pick(sorted(by_class.get(cls, [])), info, n, rng)
-        print(f"class {cls} ({CLASS_NAMES.get(cls, '?')}): "
-              f"{len(got)}/{n} chosen from {len(by_class.get(cls, []))}")
+        print(
+            f"class {cls} ({CLASS_NAMES.get(cls, '?')}): "
+            f"{len(got)}/{n} chosen from {len(by_class.get(cls, []))}"
+        )
         rows += [(d, info[d]) for d in got]
     with args.out.open("w", newline="") as fh:
         w = csv.writer(fh, delimiter="\t")
-        w.writerow(["domain", "class", "architecture", "topology",
-                    "homology", "length"])
+        w.writerow(
+            [
+                "domain",
+                "class",
+                "architecture",
+                "topology",
+                "homology",
+                "length",
+            ]
+        )
         for d, c in rows:
             w.writerow([d, c["C"], c["A"], c["T"], c["H"], c["length"]])
     print(f"wrote {len(rows)} domains to {args.out}")

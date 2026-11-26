@@ -1,0 +1,91 @@
+; FINAL Syt1 C2A run (Nov 2026), tau 0500ps: 92 x 2 us, 100 ps frames. From syt_c2a_incoming.ppf
+; + automatic tICA modes (90% coverage), cohesion-boot 100, seed-group 2, min-size 4, seed-fraction 0.25.
+seed = 0
+frames         = 0
+stride         = 1
+rse-cutoff     = 15.0
+rse-components = -1  ; choose from rse-coverage
+rse-coverage   = 0.9  ; median residue keeps 90% of its kinetic variance
+min-seq-sep    = 2
+contact-cutoff = 8.0
+pair-features  = 0
+pair-cutoff    = 8.0
+lag        = 5  ; tau = 5 frames x 100 ps
+unit-dim   = 8
+env-dim    = 20
+ridge      = 0.01
+n-null     = 128
+shift-mode = auto
+backend    = flux
+combine    = max
+cond-unit  = full
+cond-env   = full
+sizes            = 2-120
+target-rel-width = 0.03
+min-supports     = 40
+max-supports     = 300
+batch-supports   = 32
+calibrate-only   = 0
+n-holdout                = 0
+no-center-replicas       = 0
+highpass-before-features = 1
+fit                      = 1
+calibrate-coarse         = 8
+skip-frames              = 0
+highpass-window          = 100  ; 20 x lag
+no-null-calibration      = 1
+null-cal-windows         = auto
+null-cal-n-windows       = 6
+null-cal-sizes           = 3,10
+null-cal-supports        = 48
+null-cal-n-null          = 32
+null-cal-target          = 0.06
+seeding                  = random
+search-graph             = predictive
+baseline                 = graph
+graph-k                  = 5
+graph-null-shifts        = 16
+rho-min                  = 0.0
+block-us                 = 1.0
+block-frames             = 0
+faces                    = 0
+no-ledger                = 0
+resolve = 0
+stability = 0
+grow-objective = incoming
+cohesion-boot            = 100  ; bootstrap draws
+cohesion-blocks          = 20
+null-cal-tol             = 0.15
+null-cal-max-replicas    = 20
+frame-ps                 = 100.0
+batched                  = auto
+env-basis                = exact
+no-feature-cache         = 0
+no-replica-overlap = 1
+dec-seeds                = 32  ; <= 25% of residues
+seed-fraction            = 0.25  ; seeds <= 25% of residues
+seed-group               = 2  ; start each growth from the seed + its strongest predictive partner (first-step barrier)
+max-size                 = 120
+min-size                 = 4  ; a candidate must gain at least as many residues as its start (2 x seed-group)
+max-unit                 = 120
+add-gate                 = ratio
+n-controls               = 8
+verify-lags  = none
+verify-null  = 32
+incoming-min-gain = 0
+
+incoming-postprocess = split
+
+split-method = recursive-spectral
+split-markov-time = 16
+split-test = both
+split-null = 199
+split-alpha = 0.05
+split-max-depth = 8
+merge-overlap = 0.5  ; family = overlap >= half with majority core; parent = union only if nu_in not worse than best member; split re-tests
+mode-recovery = on
+recovery-modes = 10
+recovery-local-dim = 0
+recovery-channel-ranks = 1,2,4
+recovery-combinations = auto
+recovery-max-combinations = 256

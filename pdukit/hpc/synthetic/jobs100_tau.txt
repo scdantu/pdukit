@@ -1,0 +1,16 @@
+# Tests 2-3: units found vs lag time (0.1-10 ns) on the tau design; 2 systems
+# one run per line: <run name> <setting=value ...>   (run_suite.sh)
+tau_g0_lag1 bench-design=tau bench-seed=0 lag=1
+tau_g0_lag2 bench-design=tau bench-seed=0 lag=2
+tau_g0_lag5 bench-design=tau bench-seed=0 lag=5
+tau_g0_lag10 bench-design=tau bench-seed=0 lag=10
+tau_g0_lag20 bench-design=tau bench-seed=0 lag=20
+tau_g0_lag50 bench-design=tau bench-seed=0 lag=50
+tau_g0_lag100 bench-design=tau bench-seed=0 lag=100
+tau_g1_lag1 bench-design=tau bench-seed=1 lag=1
+tau_g1_lag2 bench-design=tau bench-seed=1 lag=2
+tau_g1_lag5 bench-design=tau bench-seed=1 lag=5
+tau_g1_lag10 bench-design=tau bench-seed=1 lag=10
+tau_g1_lag20 bench-design=tau bench-seed=1 lag=20
+tau_g1_lag50 bench-design=tau bench-seed=1 lag=50
+tau_g1_lag100 bench-design=tau bench-seed=1 lag=100
