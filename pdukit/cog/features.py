@@ -16,7 +16,7 @@ from pathlib import Path
 import numpy as np
 
 from pdukit.io.results.jsonable import jsonable as _jsonable
-from pdukit.runlog import log
+from pdukit.runlog import Progress, log
 
 
 def scatter_planted(b, seed=0):
@@ -312,6 +312,7 @@ class FeatureSource:
             spectra=spectra,
             coverage=a.rse_coverage,
             report=report,
+            on_progress=Progress("RSE features, residues"),
         )
         L_ = max((len(x) for x in spectra), default=0)
         spectra = (

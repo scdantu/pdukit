@@ -3,7 +3,8 @@
 ``_environment`` describes the machine and the code (host, versions, git
 commit, GPU) for the run record; ``_parse_sizes`` reads a size list such
 as ``6-10,12``;
-``_available_cores`` counts the cores this process may use.
+``_available_cores`` counts the cores this process may use;
+``limit_threads`` caps the threads numpy/scipy and torch use.
 """
 
 from __future__ import annotations
@@ -12,6 +13,7 @@ import os
 import platform
 import socket
 import subprocess
+import sys
 
 import numpy as np
 
@@ -21,6 +23,39 @@ def _available_cores():
         return len(os.sched_getaffinity(0))
     except AttributeError:  # not on Linux
         return os.cpu_count() or 1
+
+
+def limit_threads(n):
+    """Cap the CPU threads of numpy/scipy (BLAS, OpenMP) and torch at n.
+
+    n <= 0 (the default -1) leaves every library at all the cores this
+    process may use.  Returns ``(threads, cores, undo)``; ``undo()`` (if
+    not None) puts the previous limits back.
+    """
+    cores = _available_cores()
+    n = int(n if n is not None else -1)
+    if n <= 0:
+        return cores, cores, None
+    from threadpoolctl import threadpool_limits
+
+    old_env = os.environ.get("OMP_NUM_THREADS")
+    os.environ["OMP_NUM_THREADS"] = str(n)  # libraries loaded later
+    limiter = threadpool_limits(limits=n)
+    torch = sys.modules.get("torch")
+    old_torch = torch.get_num_threads() if torch is not None else None
+    if torch is not None:
+        torch.set_num_threads(n)
+
+    def undo():
+        limiter.restore_original_limits()
+        if old_env is None:
+            os.environ.pop("OMP_NUM_THREADS", None)
+        else:
+            os.environ["OMP_NUM_THREADS"] = old_env
+        if old_torch is not None:
+            torch.set_num_threads(old_torch)
+
+    return n, cores, undo
 
 
 def _parse_sizes(text):

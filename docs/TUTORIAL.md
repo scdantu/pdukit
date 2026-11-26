@@ -36,7 +36,7 @@ python3 -m venv .venv && source .venv/bin/activate
 pip install -e ".[xtc,plot,dev]"
 ```
 
-Extras: `xtc` reads XTC/DCD/TRR (via MDAnalysis), `plot` adds matplotlib, `dev` adds the tests, `gpu` is for CUDA machines (`pip install -e ".[gpu]"`).
+Extras: `xtc` reads XTC/DCD/TRR (via MDAnalysis), `plot` adds matplotlib, `dev` adds the tests, `gpu` is for CUDA machines (`pip install -e ".[gpu]"`). On a GPU machine install torch for your CUDA first, e.g. CUDA 12.1: `pip install "torch<2.6" --index-url https://download.pytorch.org/whl/cu121`; `device = auto` (the default) then uses it.
 
 Check it works:
 
@@ -94,7 +94,7 @@ Choosing a preset (all in `pdukit/params/`):
 
 Copy a preset, edit it, keep it with your results. Format is `key = value`, `;` starts a comment.
 
-**Settings and the command line.** `pdu run` takes only seven arguments: `-f` (trajectories), `-s` (topology), `-p` (the ppf), `-o` (output folder), `--set`, `--log-level` and `--check`. Everything else is a key in the ppf. To change one setting for one run without editing the file, use `--set`, for example `--set lag=20 dec-seeds=64`. The order of priority is: built-in default, then the ppf, then the command line. `--check` prints what will really be used and where each value came from (`default`, `ppf:LINE` or `cli`). `-f`, `-s` and `-o` can also be written in the ppf (`xtc = rep1.xtc rep2.xtc`). Old command lines such as `--dec-seeds 64` still work but print a deprecation warning. The full list of settings is in `docs/OPTIONS.md`.
+**Settings and the command line.** `pdu run` takes only eight arguments: `-f` (trajectories), `-s` (topology), `-p` (the ppf), `-o` (output folder), `--nt` (CPU threads; default -1 = all cores), `--set`, `--log-level` and `--check`. Everything else is a key in the ppf. To change one setting for one run without editing the file, use `--set`, for example `--set lag=20 dec-seeds=64`. The order of priority is: built-in default, then the ppf, then the command line. `--check` prints what will really be used and where each value came from (`default`, `ppf:LINE` or `cli`). `-f`, `-s` and `-o` can also be written in the ppf (`xtc = rep1.xtc rep2.xtc`). Old command lines such as `--dec-seeds 64` still work but print a deprecation warning. The full list of settings is in `docs/OPTIONS.md`.
 
 The setting that matters most is **`lag`** (in frames): how far ahead one residue's motion is predicted from another's. Pick it so lag x `frame-ps` is a few hundred ps to a few ns, then check how the result changes with it (section 4, `plot lag`).
 
@@ -119,7 +119,7 @@ Each line starts with a time and a 3-letter phase:
 | SCR, FAC, UNI, RES, LED, STB, DEF, VER, CMP, MOD | optional extra checks |
 | OUT | writing results |
 
-Make it quieter or noisier with `--log-level quiet|info|debug` (or `log-level` in the ppf). Lines starting `!!` are warnings: read them.
+Make it quieter or noisier with `--log-level quiet|info|debug` (or `log-level` in the ppf). Lines starting `!!` are warnings: read them. The same lines are saved in `pdu.log` in the output folder. The second line says how many CPU threads (`--nt`) and which device the run uses; check `WSP ... backend torch on cuda` to be sure the GPU is used.
 
 ## 5. Analyse the results
 

@@ -17,6 +17,7 @@ the pipeline reads (``cfg.dest`` or ``cfg["dest"]``).  ``kind`` is one of
 SETTINGS = [
     ('files and general options', 'seed', 'seed', 'int', 0, None, False, False, 'random seed'),
     ('files and general options', 'log-level', 'log_level', 'str', 'info', ['quiet', 'info', 'debug'], False, False, 'progress log detail: quiet = warnings only, info = one line per step, debug = also per-growth-step traces'),
+    ('files and general options', 'nt', 'nt', 'int', -1, None, False, True, 'CPU threads for numpy/scipy and torch (-1 = all cores this process may use)'),
     ('files and general options', 'outdir', 'outdir', 'str', None, None, False, True, 'output directory'),
     ('files and general options', 'params', 'params', 'str', None, None, False, True, 'parameter file (.ppf, key = value); command-line options win'),
     ('planted benchmark', 'planted', 'planted', 'flag', False, None, False, False, 'run on a synthetic planted system with a known answer instead of MD files (-s, -f)'),
@@ -57,7 +58,7 @@ SETTINGS = [
     ('estimator', 'shift-mode', 'shift_mode', 'str', 'auto', ['auto', 'global', 'within', 'cross'], False, False, 'how the null displaces the environment in time: global (pooled), within (each replica), cross (a different replica); auto = cross with 2+ replicas, else within'),
     ('estimator', 'backend', 'backend', 'str', 'flux', ['flux', 'schur'], False, False, 'estimator backend: flux (FluxWorkspace) or schur (Schur- complement form)'),
     ('estimator', 'combine', 'combine', 'str', 'max', ['max', 'sum', 'in', 'out'], False, False, 'how incoming and outgoing channels form the cost: max, sum, in (incoming only) or out (outgoing only)'),
-    ('estimator', 'device', 'device', 'str', None, None, False, True, 'torch device for the estimator, e.g. cuda or cpu (default: cuda if available)'),
+    ('estimator', 'device', 'device', 'str', 'auto', None, False, True, 'where the estimator runs: auto (CUDA GPU when torch can use one, else CPU), cuda, cpu or mps'),
     ('estimator', 'cond-unit', 'cond_unit', 'str', 'full', ['full', 'reduced'], False, False, "unit's present subtracted whole (COG 2.1) or as unit_dim slow modes (v1.0)"),
     ('estimator', 'cond-env', 'cond_env', 'str', 'full', None, False, False, "environment's present subtracted whole ('full'), as N slow modes (an integer), or as env_dim modes ('reduced', v1.0)"),
     ('calibration', 'sizes', 'sizes', 'str', None, None, False, False, "calibration sizes, e.g. '2-40' (default 2..max-unit)"),

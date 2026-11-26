@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
+from pdukit.cog.runinfo import limit_threads
 from pdukit.cog.scoring.scorer import VERSION
 from pdukit.cog.stages.discover import DiscoverUnitsStage, ReportModesStage
 from pdukit.cog.stages.prepare import (
@@ -15,7 +18,14 @@ from pdukit.cog.stages.search import (
     BuildWorkspaceStage,
     CalibrateStage,
 )
-from pdukit.runlog import PHASES, log, set_level, set_phase
+from pdukit.runlog import (
+    PHASES,
+    close_file,
+    log,
+    set_file,
+    set_level,
+    set_phase,
+)
 
 STAGES = (
     LoadFeaturesStage,
@@ -62,12 +72,24 @@ class Pipeline:
             )
         set_level(getattr(args, "log_level", "info"))
         set_phase("INI")
-        log(f"{VERSION} run -> {state.out}")
-        state.save()
-        for stage in self.stages:
-            self._stage(stage.code, lambda: stage.run(state))
-            if stage.code == "CAL" and args.calibrate_only:
-                log("--calibrate-only: stopping after calibration")
-                return 0
-        state.save()
-        return 0
+        logfile = set_file(Path(state.out) / "pdu.log")
+        threads, cores, undo = limit_threads(getattr(args, "nt", -1))
+        try:
+            log(f"{VERSION} run -> {state.out}")
+            log(
+                f"threads {threads} of {cores} cores  device "
+                f"{getattr(args, 'device', None) or 'cpu'}"
+                + (f"  log {logfile.name}" if logfile else "")
+            )
+            state.save()
+            for stage in self.stages:
+                self._stage(stage.code, lambda: stage.run(state))
+                if stage.code == "CAL" and args.calibrate_only:
+                    log("--calibrate-only: stopping after calibration")
+                    return 0
+            state.save()
+            return 0
+        finally:
+            close_file()
+            if undo is not None:
+                undo()

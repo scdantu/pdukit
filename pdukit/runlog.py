@@ -9,9 +9,13 @@ step, per split node, ...) are ``debug`` and hidden unless
 The current phase is global state set with :func:`set_phase`, so code deep
 in a phase (growth, split, ports) is tagged without being told which phase
 it belongs to.  A message may still override it with ``phase=``.
+
+Every line also goes to the run's log file (``<outdir>/pdu.log``) once
+:func:`set_file` has opened it, so a run in the background leaves a log.
 """
 
 import time
+from pathlib import Path
 
 PHASES = {
     "INI": "initialisation",
@@ -44,7 +48,7 @@ PHASES = {
 
 LEVELS = {"quiet": 30, "info": 20, "debug": 10}
 _T0 = time.perf_counter()
-_STATE = {"phase": "INI", "level": LEVELS["info"]}
+_STATE = {"phase": "INI", "level": LEVELS["info"], "file": None}
 
 
 def set_phase(code):
@@ -64,6 +68,28 @@ def set_level(name):
     _STATE["level"] = LEVELS[name]
 
 
+def set_file(path):
+    """Also write every log line to ``path`` (replaced if it exists).
+
+    Does nothing when the folder of ``path`` does not exist.  Returns the
+    path written to, or None.
+    """
+    close_file()
+    path = Path(path)
+    if not path.parent.is_dir():
+        return None
+    _STATE["file"] = open(path, "w", encoding="utf-8")  # noqa: SIM115
+    return path
+
+
+def close_file():
+    """Stop writing the log file (the screen log goes on)."""
+    fh = _STATE["file"]
+    _STATE["file"] = None
+    if fh is not None:
+        fh.close()
+
+
 def log(msg, level="info", phase=None):
     """Print one phase-tagged, time-stamped line (flushed)."""
     msg = str(msg)
@@ -75,7 +101,12 @@ def log(msg, level="info", phase=None):
         return
     code = phase or _STATE["phase"]
     stamp = time.perf_counter() - _T0
-    print(f"[{stamp:7.1f}] {code} {mark} {msg.strip()}", flush=True)
+    line = f"[{stamp:7.1f}] {code} {mark} {msg.strip()}"
+    print(line, flush=True)
+    fh = _STATE["file"]
+    if fh is not None:
+        fh.write(line + "\n")
+        fh.flush()
 
 
 def debug(msg, phase=None):
@@ -84,3 +115,29 @@ def debug(msg, phase=None):
 
 
 log.debug = debug
+
+
+class Progress:
+    """Log ``label: done/total`` each time another ``step`` percent is done.
+
+    Called as ``progress(done, total)``; a new pass starts when ``done``
+    goes back to the start, and its lines say ``pass 2``, ``pass 3``, ...
+    """
+
+    def __init__(self, label, step=10):
+        """Report ``label`` every ``step`` percent."""
+        self.label, self.step = label, max(1, int(step))
+        self.passes, self._last, self._done = 0, -1, None
+
+    def __call__(self, done, total):
+        """Record that ``done`` of ``total`` items are finished."""
+        if self._done is None or done <= self._done:
+            self.passes += 1
+            self._last = -1
+        self._done = done
+        pct = 100 * done // max(total, 1)
+        mark = pct // self.step
+        if mark > self._last:
+            self._last = mark
+            tag = f" (pass {self.passes})" if self.passes > 1 else ""
+            log(f"{self.label}{tag}: {done}/{total} ({pct}%)")

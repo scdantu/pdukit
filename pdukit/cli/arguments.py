@@ -1,6 +1,7 @@
-"""The command line of ``pdu run``: seven arguments, everything else in a ppf.
+"""The command line of ``pdu run``: eight arguments, everything else in a ppf.
 
     pdu run -p my.ppf -f rep1.xtc rep2.xtc -s top.pdb -o out
+    pdu run -p my.ppf --nt 8              # use 8 CPU threads
     pdu run -p my.ppf --set lag=20 dec-seeds=64
     pdu run -p my.ppf --check            # print resolved settings, run nothing
 
@@ -15,11 +16,13 @@ import sys
 
 from pdukit.config.config import _ROWS, Config, ConfigError, normalise_key
 
-ARGUMENTS = ("-f", "-s", "-p", "-o", "--set", "--log-level", "--check")
+ARGUMENTS = (
+    "-f", "-s", "-p", "-o", "--nt", "--set", "--log-level", "--check"
+)
 
 
 def build_parser(description, prog="pdu run"):
-    """Return the parser of the seven run arguments."""
+    """Return the parser of the eight run arguments."""
     ap = argparse.ArgumentParser(prog=prog, description=description)
     ap.add_argument("-f", "--traj", "--xtc", nargs="+", metavar="FILE",
                     help="trajectory files, one per replica (or xtc = ... "
@@ -31,6 +34,9 @@ def build_parser(description, prog="pdu run"):
                     "nearly every setting")
     ap.add_argument("-o", "--out", "--outdir", metavar="DIR",
                     help="output folder")
+    ap.add_argument("--nt", "-nt", type=int, metavar="N",
+                    help="CPU threads for numpy/scipy and torch "
+                    "(default -1 = all cores)")
     ap.add_argument("--set", nargs="+", metavar="KEY=VALUE", default=[],
                     action="extend",
                     help="override any setting of the ppf, e.g. --set lag=20 "
@@ -92,7 +98,8 @@ def parse_run(argv, description="pdu run: detect protein dynamical units",
                            ("xtc-topology", args.top),
                            ("outdir", args.out),
                            ("params", args.ppf),
-                           ("log-level", args.log_level)):
+                           ("log-level", args.log_level),
+                           ("nt", None if args.nt is None else str(args.nt))):
             if value:
                 sets.append((key, value))
         sets += list(args.set)

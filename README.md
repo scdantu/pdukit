@@ -1,4 +1,4 @@
-# pdu — COG (v1.0.5a0)
+# pdu — COG (v1.0.5a1)
 
 > **Alpha release.** The method and the code are under active development; interfaces, output
 > formats and defaults may change before v1.0. Internally this is algorithm lineage "COG 2.1".
@@ -8,7 +8,7 @@ residues whose motions are coupled to each other more strongly than to the rest 
 protein, at a chosen lag time and for chosen per-residue features. It uses dynamics only;
 spatial contacts are not used in the search or in the baselines.
 
-This repository is the alpha pre-release (`v1.0.5a0`) of the COG pipeline (`pdukit` Python package).
+This repository is the alpha pre-release (`v1.0.5a1`) of the COG pipeline (`pdukit` Python package).
 It is the code behind the T4 lysozyme and synaptotagmin-1 C2A analyses.
 
 Every unit is scored two ways:
@@ -51,6 +51,12 @@ pip install -e ".[gpu]"            # optional: batched scoring on a CUDA GPU (to
 ```
 
 Python 3.10 or newer. Runs on CPU with numpy only; a GPU speeds up large proteins.
+
+**GPU.** torch must match your CUDA driver, so install it from PyTorch's index first, e.g. for
+CUDA 12.1: `pip install "torch<2.6" --index-url https://download.pytorch.org/whl/cu121`
+(see pytorch.org for other versions). `device = auto` (the default) then uses the GPU; the log
+line `WSP ... backend torch on cuda` confirms it, and a `!!` warning says why when a GPU is
+present but not used. The feature step always runs on the CPU.
 
 ## Quick check on a planted system (minutes, CPU)
 
@@ -106,8 +112,8 @@ faces           = 0       ; flags take 0/1, yes/no, on/off
 n-holdout       = 0       ; 0 = discover on all replicas
 ```
 
-`pdu run` takes only seven arguments (`-f` trajectories, `-s` topology, `-p` ppf, `-o` output
-folder, `--set`, `--log-level`, `--check`); everything else is a key in the ppf, and any key can
+`pdu run` takes only eight arguments (`-f` trajectories, `-s` topology, `-p` ppf, `-o` output
+folder, `--nt` CPU threads (default -1 = all cores), `--set`, `--log-level`, `--check`); everything else is a key in the ppf, and any key can
 be overridden for one run with `--set lag=20 dec-seeds=64`. Case, `-` and `_` do not matter in
 keys. Precedence: default, then parameter file, then command line. An unknown key is an error
 with a suggestion, so a typo cannot fall back to a default silently. Every run writes its fully

@@ -20,6 +20,7 @@ from pdukit.numerics.matching import match_units
 PRESET = Path(__file__).resolve().parents[1] / "params" / "mdcath_incoming.ppf"
 EXPECTED_FILES = [
     "results.json",
+    "pdu.log",
     "pdu_out.ppf",
     "calibration.json",
     "bootstrap_rho.npz",

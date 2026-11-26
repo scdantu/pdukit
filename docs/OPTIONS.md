@@ -12,6 +12,7 @@ The last column lists the shipped presets that change the option from its defaul
 |---|---|---|---|---|
 | `seed` | 0 |  | random seed | planted_fast: 1, synthetic100: 1, synthetic36: 1 |
 | `log-level` | info | quiet, info, debug | progress log detail: quiet = warnings only, info = one line per step, debug = also per-growth-step traces |  |
+| `nt` | -1 |  | CPU threads for numpy/scipy and torch (-1 = all cores this process may use) (run-specific, not in parameter files) |  |
 | `outdir` | unset |  | output directory (run-specific, not in parameter files) |  |
 | `params` | unset |  | parameter file (.ppf, key = value); command-line options win (run-specific, not in parameter files) |  |
 
@@ -67,7 +68,7 @@ The last column lists the shipped presets that change the option from its defaul
 | `shift-mode` | auto | auto, global, within, cross | how the null displaces the environment in time: global (pooled), within (each replica), cross (a different replica); auto = cross with 2+ replicas, else within |  |
 | `backend` | flux | flux, schur | estimator backend: flux (FluxWorkspace) or schur (Schur- complement form) |  |
 | `combine` | max | max, sum, in, out | how incoming and outgoing channels form the cost: max, sum, in (incoming only) or out (outgoing only) |  |
-| `device` | unset |  | torch device for the estimator, e.g. cuda or cpu (default: cuda if available) (run-specific, not in parameter files) |  |
+| `device` | auto |  | where the estimator runs: auto (CUDA GPU when torch can use one, else CPU), cuda, cpu or mps (run-specific, not in parameter files) |  |
 | `cond-unit` | full | full, reduced | unit's present subtracted whole (COG 2.1) or as unit_dim slow modes (v1.0) |  |
 | `cond-env` | full |  | environment's present subtracted whole ('full'), as N slow modes (an integer), or as env_dim modes ('reduced', v1.0) |  |
 
