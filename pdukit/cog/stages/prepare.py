@@ -18,6 +18,29 @@ from pdukit.cog.scoring.pair import pair_distance_features
 from pdukit.runlog import log
 
 
+def direct_window(args):
+    """Return the window to build features with at once, or None.
+
+    The unfiltered feature set is only needed to choose the window
+    (highpass-window = auto), for the window scan as a check
+    (null-cal-check), or when asked for (raw-feature-pass).  Otherwise,
+    with a fixed window applied to the distances
+    (highpass-before-features), building it first only costs time and
+    memory, so the filtered features are built directly.
+    """
+    hp = str(args.highpass_window or "0").strip()
+    if (
+        args.planted
+        or not args.highpass_before_features
+        or not hp.isdigit()
+        or int(hp) <= 0
+        or getattr(args, "null_cal_check", False)
+        or getattr(args, "raw_feature_pass", False)
+    ):
+        return None
+    return int(hp)
+
+
 class LoadFeaturesStage:
     """Stage 1: planted system or MD replicas -> features."""
 
@@ -29,7 +52,17 @@ class LoadFeaturesStage:
         state.source = (
             None if args.planted else FeatureSource(args, state.timings)
         )
-        data = load_data(args, state.timings, state.source)
+        window = direct_window(args)
+        if window:
+            log(
+                f"unfiltered feature pass skipped: features built once with "
+                f"the high-pass window ({window} frames) on the distances "
+                "(raw-feature-pass = 1 builds the unfiltered set first)"
+            )
+            data = state.source.get(window=window)
+            state.features_window = window
+        else:
+            data = load_data(args, state.timings, state.source)
         state.data = data
         state.feats = data["feats"]
         state.segments = data["segments"]
@@ -64,7 +97,10 @@ class SplitReplicasStage:
     """Stage 2: discovery and held-out replicas, replica overlap.
 
     The replica overlap is measured on the UNcentred features: it is
-    the state differences it is there to see; centring follows it.
+    the state differences it is there to see; centring follows it.  When
+    the unfiltered feature pass is skipped (`direct_window`) it is
+    measured on the high-passed features, so only differences faster
+    than the window can show.
     """
 
     code = "REP"
@@ -205,7 +241,12 @@ class PreprocessStage:
         args, results = state.args, state.results
         hp = state.hp
         planted = args.planted
-        if hp and args.highpass_before_features and not planted:
+        if (
+            hp
+            and args.highpass_before_features
+            and not planted
+            and state.features_window != hp
+        ):
             # the unfiltered set is replaced next: free it first (memory)
             state.feats = None
             if isinstance(state.data, dict):

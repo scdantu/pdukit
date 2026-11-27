@@ -17,29 +17,41 @@ log-level = info
 
 ; ---- MD data ----
 
-; first N frames per replica (0 = all)
+; first N frames per replica (0 = all); also applied to synthetic systems
+; (pdu bench)
 frames = 0
 
-; use every Nth frame of each replica
+; use every Nth frame of each replica (then lag and highpass-window, which
+; are in frames, must be divided by N); also applied to synthetic systems
 stride = 1
 
 ; radius in angstrom of a residue's structural environment: neighbours
 ; inside it enter its descriptor
 rse-cutoff = 15.0
 
-; slow tICA components kept per residue after compressing its neighbour
-; distances: a number >= 1, or -1 = choose it from rse-coverage (two passes
-; over the distances)
+; how K, the number of slow tICA modes per residue, is set: 'fixed' = rse-
+; components; 'auto' = chosen from rse-coverage and rse-min-share (unset:
+; auto when rse-components = -1, else fixed) [auto, fixed]
+;rse-mode =
+
+; K with rse-mode = fixed: slow tICA modes kept per residue after
+; compressing its neighbour distances (a number >= 1); -1 = choose it
+; automatically (two passes over the distances)
 rse-components = -1
 
-; with rse-components = -1: smallest number of tICA modes at which the
-; median residue keeps this share of its kinetic variance (sum of lambda^2
-; over its whole spectrum); always reported in results
+; automatic K, condition 1: the fewest modes at which a residue keeps this
+; share of its kinetic variance (sum of lambda^2 over its whole spectrum); K
+; is the median over residues; always reported in results
 ; tica_spectrum.coverage
 rse-coverage = 0.9
 
-; with rse-components = -1: upper limit on the chosen number of tICA modes
-; (0 = none); memory is frames x residues x modes x 4 bytes per feature set
+; automatic K, condition 2: keep only modes that each add at least this
+; share of a residue's sum of lambda^2 (e.g. 0.03); a residue stops at
+; whichever condition comes first, so K gets as close to rse-coverage as
+; modes worth keeping allow (0 = condition off)
+rse-min-share = 0.0
+
+; automatic K: upper limit (0 = none); memory grows with (residues x K)^2
 rse-max-components = 0
 
 ; neighbours closer than this in sequence are left out of the descriptor
@@ -166,6 +178,17 @@ highpass-window = 0
 ; never run the highpass-window scan, not even for highpass-window = auto
 ; (which then stops with an error)
 no-null-calibration = 0
+
+; with a fixed highpass-window and highpass-before-features: also build the
+; unfiltered features first (costs one extra feature pass and its memory;
+; only the replica-overlap check uses them, on unfiltered data)
+raw-feature-pass = 0
+
+; do not record every residue's affinity to every unit
+; (residue_affinity.csv: change in nu_in, nu_out and cohesion when the
+; residue joins or leaves each unit's core; costs about residues x units
+; extra scores)
+no-residue-affinity = 0
 
 ; run the highpass-window scan even when the window is fixed or off, as a
 ; check (it is always run for highpass-window = auto); costs about one

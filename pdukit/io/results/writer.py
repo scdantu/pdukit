@@ -11,6 +11,7 @@ stage finishes:
     calibration.json        thresholds and the size-matched baseline
     bootstrap_rho.npz       bootstrap draws of the pair coupling
     incoming_*.csv / .json  growth, merge, split and port tables
+    residue_affinity*.csv   every residue's affinity to every unit
     global_mode_*.csv / ... mode recovery tables and report
 
 The tables are written by the functions in `results.stage_files`.
@@ -72,6 +73,24 @@ class ResultsWriter:
     def write_classes(self, classes):
         """Core, port and bridge classes of the residues."""
         stage_files.write_classes(self.out, classes)
+
+    def write_affinity(self, rows, summary):
+        """Every residue's affinity to every unit, and a per-residue summary.
+
+        ``residue_affinity.csv`` (residue x unit) and
+        ``residue_affinity_summary.csv`` (one row per residue).
+        """
+        from pdukit.io.tables import CsvWriter
+
+        CsvWriter(self.out / "residue_affinity.csv").write(
+            rows, note="change when the residue is in rather than out of the"
+            " unit core; delta_nu_in < 0 and delta_cohesion > 0 = belongs",
+        )
+        flat = [
+            {**r, "member_of": " ".join(map(str, r.get("member_of", [])))}
+            for r in summary
+        ]
+        CsvWriter(self.out / "residue_affinity_summary.csv").write(flat)
 
     def write_mode_recovery(self, report):
         """Global-mode recovery report and tables."""

@@ -1,0 +1,24 @@
+# How much trajectory is needed?  The tau design (dt 0.1 ns, 2 replicas x 20,000
+# frames, known units) at lag 1 ns, final search settings, two systems.
+# synthetic100.ppf has seed = 1, so the second search seed is seed=2.
+#   bash pdukit/hpc/synthetic/run_suite.sh pdukit/params/synthetic100.ppf \
+#        pdukit/hpc/synthetic/jobs100_thinning.txt runs_thin 2
+#   pdu score-bench runs_thin/* -o runs_thin/tables
+#   pdu converge runs_thin/g0_full runs_thin/g0_* -o runs_thin/tables_g0
+# Thinning by s divides the lag (in frames) by s, so it stays 1 ns.
+g0_full bench-design=tau bench-seed=0 lag=10 dec-seeds=24 seed-group=2 min-size=4 seed-fraction=0.25
+g0_seed2 bench-design=tau bench-seed=0 lag=10 dec-seeds=24 seed-group=2 min-size=4 seed-fraction=0.25 seed=2
+g0_thin2 bench-design=tau bench-seed=0 lag=5 stride=2 dec-seeds=24 seed-group=2 min-size=4 seed-fraction=0.25
+g0_thin5 bench-design=tau bench-seed=0 lag=2 stride=5 dec-seeds=24 seed-group=2 min-size=4 seed-fraction=0.25
+g0_thin10 bench-design=tau bench-seed=0 lag=1 stride=10 dec-seeds=24 seed-group=2 min-size=4 seed-fraction=0.25
+g0_trunc50 bench-design=tau bench-seed=0 lag=10 frames=10000 dec-seeds=24 seed-group=2 min-size=4 seed-fraction=0.25
+g0_trunc25 bench-design=tau bench-seed=0 lag=10 frames=5000 dec-seeds=24 seed-group=2 min-size=4 seed-fraction=0.25
+g0_trunc12 bench-design=tau bench-seed=0 lag=10 frames=2500 dec-seeds=24 seed-group=2 min-size=4 seed-fraction=0.25
+g1_full bench-design=tau bench-seed=1 lag=10 dec-seeds=24 seed-group=2 min-size=4 seed-fraction=0.25
+g1_seed2 bench-design=tau bench-seed=1 lag=10 dec-seeds=24 seed-group=2 min-size=4 seed-fraction=0.25 seed=2
+g1_thin2 bench-design=tau bench-seed=1 lag=5 stride=2 dec-seeds=24 seed-group=2 min-size=4 seed-fraction=0.25
+g1_thin5 bench-design=tau bench-seed=1 lag=2 stride=5 dec-seeds=24 seed-group=2 min-size=4 seed-fraction=0.25
+g1_thin10 bench-design=tau bench-seed=1 lag=1 stride=10 dec-seeds=24 seed-group=2 min-size=4 seed-fraction=0.25
+g1_trunc50 bench-design=tau bench-seed=1 lag=10 frames=10000 dec-seeds=24 seed-group=2 min-size=4 seed-fraction=0.25
+g1_trunc25 bench-design=tau bench-seed=1 lag=10 frames=5000 dec-seeds=24 seed-group=2 min-size=4 seed-fraction=0.25
+g1_trunc12 bench-design=tau bench-seed=1 lag=10 frames=2500 dec-seeds=24 seed-group=2 min-size=4 seed-fraction=0.25

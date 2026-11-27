@@ -76,14 +76,14 @@ def load_data(a, timings, src=None):
         )
         if a.scatter:
             b = scatter_planted(b, seed=a.bench_seed + 1000)
-        return {
+        return _thinned(a, {
             "feats": b["feats"],
             "segments": b["segments"],
             "adjacency": b["adjacency"],
             "coords": None,
             "truth": b["truth"],
             "meta": {"planted": b["config"], "scatter": bool(a.scatter)},
-        }
+        })
     if a.planted:
         from pdukit.bench.planted import planted_system
 
@@ -117,16 +117,37 @@ def load_data(a, timings, src=None):
                 "planted units scattered over the fold: residue positions "
                 "permuted, so units are not spatially contiguous"
             )
-        return {
+        return _thinned(a, {
             "feats": b["feats"],
             "segments": b["segments"],
             "adjacency": b["adjacency"],
             "coords": None,
             "truth": b["truth"],
             "meta": {"planted": b["config"], "scatter": bool(a.scatter)},
-        }
+        })
 
     return src.get(window=None)
+
+
+def _thinned(a, data):
+    """Apply ``frames`` and ``stride`` to a synthetic system, as to MD data.
+
+    So the same convergence tests (fewer frames, every Nth frame) can be run
+    where the answer is known.
+    """
+    stride, frames = int(a.stride or 1), int(a.frames or 0)
+    if stride <= 1 and frames <= 0:
+        return data
+    feats, segs = thin_replicas(
+        data["feats"], data["segments"], stride=stride, max_frames=frames
+    )
+    log(
+        f"synthetic replicas thinned: first {frames or 'all'} frames, every "
+        f"{stride}: {data['feats'].shape[0]} -> {feats.shape[0]} frames"
+    )
+    data.update(feats=feats, segments=segs)
+    data["meta"]["thinned"] = {"stride": stride, "frames": frames}
+    return data
 
 
 def file_signature(path):
@@ -189,6 +210,7 @@ class FeatureSource:
                 {
                     "rse_coverage": a.rse_coverage,
                     "rse_max_components": a.rse_max_components,
+                    "rse_min_share": a.rse_min_share,
                 }
                 if a.rse_components < 1
                 else {}
@@ -311,6 +333,7 @@ class FeatureSource:
             distance_filter=dfilt,
             spectra=spectra,
             coverage=a.rse_coverage,
+            min_share=a.rse_min_share,
             report=report,
             on_progress=Progress("RSE features, residues"),
         )
@@ -335,7 +358,10 @@ class FeatureSource:
             f"RSE features {feats.shape}"
             + (
                 f" ({feats.shape[2]} tICA modes: median residue keeps "
-                f"{a.rse_coverage:.0%} of sum lambda^2)"
+                f"{a.rse_coverage:.0%} of sum lambda^2"
+                + (f", each mode adding >= {a.rse_min_share:.1%}; limited "
+                   f"by {report.get('limited_by')}" if a.rse_min_share else "")
+                + ")"
                 if a.rse_components < 1
                 else ""
             )
@@ -595,6 +621,21 @@ def coarse_sizes(lo, hi, n):
         return [lo]
     g = np.unique(np.round(np.geomspace(lo, hi, n)).astype(int))
     return sorted(set(g.tolist()) | {lo, hi})
+
+
+def thin_replicas(arr, segments, stride=1, max_frames=0):
+    """Keep the first ``max_frames`` frames of every replica (0 = all), then
+    every ``stride``-th of them.  Returns (array, new segments).
+    """
+    stride = max(1, int(stride))
+    parts, segs, cur = [], [], 0
+    for a, b in segments:
+        end = min(b, a + int(max_frames)) if max_frames else b
+        part = arr[a:end:stride]
+        parts.append(part)
+        segs.append((cur, cur + len(part)))
+        cur += len(part)
+    return np.ascontiguousarray(np.concatenate(parts, axis=0)), segs
 
 
 def skip_start(arr, segments, n_skip):

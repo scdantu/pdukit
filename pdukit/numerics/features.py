@@ -29,6 +29,7 @@ def rse_features(
     coverage=0.9,
     report=None,
     max_components=0,
+    min_share=0.0,
 ):
     """Residue Structural Environment descriptors (v3.0 eq. 5).
 
@@ -83,14 +84,19 @@ def rse_features(
     coverage     : target share of each residue's spectrum (kinetic variance
                    sum lambda^2 for tICA, variance for PCA) used when the
                    number is chosen automatically, and reported always
+    min_share    : with the automatic number, a mode is kept only if it
+                   adds at least this share of the residue's spectrum
+                   (0 = no such condition); see `modes_for_coverage`
     spectra      : list; each residue's full eigenvalue list is appended
     report       : dict; filled with the number of components used, the
                    coverage each residue keeps with it, and the number each
                    residue would need to reach ``coverage``
 
     AUTOMATIC NUMBER OF COMPONENTS.  With ``n_components <= 0`` every
-    residue's spectrum is computed first, the number K is chosen so that the
-    median residue keeps ``coverage`` of its spectrum (at least 2), and the
+    residue's spectrum is computed first, then each residue needs the
+    fewest modes that reach ``coverage`` of its spectrum, but no more than
+    the modes that each add at least ``min_share``.  K is the median of
+    that over residues (at least 2, at most ``max_components``), and the
     distances are computed a second time to project on K components
     (slower: two passes).
 
@@ -216,7 +222,10 @@ def rse_features(
             on_progress(i + 1, N)
 
     power = 2 if koopman else 1
-    k_need, _ = modes_for_coverage(eigen, coverage, power=power)
+    k_cov, _ = modes_for_coverage(eigen, coverage, power=power)
+    k_need, chosen = modes_for_coverage(
+        eigen, coverage, power=power, min_share=min_share
+    )
     if auto:
         k = max(2, min(k_need, max(len(w) for w in eigen)))
         if max_components and max_components > 0:
@@ -241,7 +250,16 @@ def rse_features(
             modes_for_target=[
                 _first_reaching(c, coverage) for c in curves
             ],
-            modes_for_target_median=int(k_need),
+            modes_for_target_median=int(k_cov),
+            min_share=float(min_share),
+            modes_by_share=[
+                modes_above_share(w, min_share, power) for w in eigen
+            ] if min_share > 0 else None,
+            modes_chosen_median=int(k_need),
+            limited_by=(
+                "min_share" if min_share > 0 and k_need < k_cov
+                else "coverage"
+            ),
         )
     return feats, neighbours, explained
 
@@ -267,17 +285,39 @@ def _first_reaching(curve, target):
     return int(min(np.searchsorted(curve, target - 1e-12) + 1, len(curve)))
 
 
-def modes_for_coverage(spectra, coverage, power=2):
+def modes_above_share(eigenvalues, min_share, power=2):
+    """Return how many leading modes each add >= ``min_share`` (at least 1).
+
+    The share of mode k is lambda_k^power over the sum over all modes
+    (negative values count as zero).  Counting stops at the first mode
+    below the threshold.
+    """
+    e = np.clip(np.asarray(eigenvalues, float), 0.0, None) ** power
+    tot = e.sum()
+    if tot <= 0 or len(e) == 0:
+        return 1
+    below = np.nonzero(e / tot < float(min_share))[0]
+    return int(max(1, below[0] if below.size else len(e)))
+
+
+def modes_for_coverage(spectra, coverage, power=2, min_share=0.0):
     """Return the number of modes needed to keep ``coverage`` of spectra.
 
     Each residue needs the smallest K whose `coverage_curve` reaches the
-    target; the number returned is the median over residues, rounded up,
-    so half the residues keep at least ``coverage`` and the report shows
-    the rest.  Returns ``(K, per_residue)``.
+    target; with ``min_share`` > 0 it gets no more than the leading modes
+    that each add at least that share (`modes_above_share`): get as close
+    to the target as modes worth keeping allow.  The number returned is
+    the median over residues, rounded up, so half the residues keep at
+    least that.  Returns ``(K, per_residue)``.
     """
     per = [
         _first_reaching(coverage_curve(w, power), coverage) for w in spectra
     ]
+    if min_share and min_share > 0:
+        per = [
+            min(k, modes_above_share(w, min_share, power))
+            for k, w in zip(per, spectra)
+        ]
     if not per:
         return 0, per
     return int(np.ceil(np.median(per))), per

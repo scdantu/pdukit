@@ -59,6 +59,7 @@ class RunState:
         self.disc = []
         self.hold = []
         self.hp = 0
+        self.features_window = None  # window the loaded features carry
         self.f_disc = self.s_disc = self.p_disc = None
         # workspace, graph and calibration
         self.ws = None

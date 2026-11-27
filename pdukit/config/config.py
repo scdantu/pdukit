@@ -377,6 +377,15 @@ class Config(Mapping):
         if a["rse_components"] != -1 and a["rse_components"] < 1:
             fail(f"rse-components must be -1 (choose from rse-coverage) or "
                  f">= 1, not {a['rse_components']}")
+        if a.get("rse_mode") == "fixed" and a["rse_components"] < 1:
+            fail("rse-mode = fixed needs rse-components = K (>= 1)")
+        if a.get("rse_mode") == "auto" and a["rse_components"] != -1:
+            fail("rse-mode = auto chooses K itself: set rse-components = -1 "
+                 "(or leave it out), and use rse-coverage, rse-min-share "
+                 "and rse-max-components")
+        if not (math.isfinite(a["rse_min_share"])
+                and 0 <= a["rse_min_share"] < 1):
+            fail(f"rse-min-share must be in [0, 1), not {a['rse_min_share']}")
         if not (math.isfinite(a["rse_coverage"])
                 and 0 < a["rse_coverage"] <= 1):
             fail(f"rse-coverage must be in (0, 1], not {a['rse_coverage']}")

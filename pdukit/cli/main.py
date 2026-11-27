@@ -25,6 +25,9 @@ MODULES = {
     "summarise": "one table from many runs",
     "compare": "do several runs find the same units?",
     "score-bench": "score pdu bench runs against the planted answer",
+    "converge": "how much trajectory is needed? compare with a full run",
+    "track": "follow residues and units across lag times",
+    "refmodes": "units vs fixed reference global modes (C-alpha, dihedral)",
 }
 
 
@@ -96,6 +99,12 @@ def main(argv=None):
         from pdukit.analysis.compare import main as run_module
     elif module == "score-bench":
         from pdukit.analysis.synthetic import main as run_module
+    elif module == "converge":
+        from pdukit.analysis.convergence import main as run_module
+    elif module == "track":
+        from pdukit.analysis.track import main as run_module
+    elif module == "refmodes":
+        from pdukit.cog.reference_modes import main as run_module
     else:
         print(f"pdu: unknown module {module!r}\n\n{_usage()}", file=sys.stderr)
         return 2

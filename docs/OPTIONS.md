@@ -31,8 +31,10 @@ repeats it.
 | `frame-ps` | 0.0 | Time between saved frames in ps. Only used to print times in the log; set it so the log speaks in ps and ns. |
 | `highpass-window` | 0 | Removes motions slower than this many frames inside every replica before anything is measured. Slow drift that a trajectory does not sample makes everything look correlated with everything and hides real units. 20 x lag is our rule; 0 = off; 'auto' scans a few windows to choose one (slow: about one workspace per window). |
 | `highpass-before-features` | off | 1 = filter the raw distances before each residue's slow modes are chosen (recommended with a high-pass window). |
-| `rse-components` | -1 | K, the number of slow modes (tICA) kept per residue. -1 = choose K so the median residue keeps rse-coverage of its slow motion. K sets the size of the problem: memory grows with (residues x K)^2. |
-| `rse-max-components` | 0 | Upper limit on the K chosen automatically. The first setting to lower when memory is short; 8-12 fits a workstation. |
+| `rse-mode` | unset | How K, the number of slow modes (tICA) kept per residue, is set: fixed (you give K in rse-components) or auto. K sets the size of the problem: memory grows with (residues x K)^2. At short lags each residue has many similar fast modes (no gap in its spectrum), so the automatic K grows quickly as the lag shortens. |
+| `rse-coverage` | 0.9 | Automatic K, condition 1: keep the fewest modes that hold this share of a residue's slow motion (sum of lambda^2), e.g. 0.9. K is the median over residues. |
+| `rse-min-share` | 0.0 | Automatic K, condition 2: keep only modes that each add at least this share (e.g. 0.03 = 3%). Each residue stops at whichever condition comes first, so K gets as close to rse-coverage as modes worth keeping allow. 0 = off. |
+| `rse-max-components` | 0 | Upper limit on the automatic K: a safety cap for memory; 8-12 fits a workstation. |
 | `n-null` | 64 | Time shifts used to build the null (the 'what would chance give' reference). 64 is precise; 32 halves the memory and time of the null with slightly noisier thresholds. |
 | `dec-seeds` | 24 | Number of growth starts. Keep seeds at or below a quarter of the residues (see seed-fraction) so units are found by growth, not by cutting overlapping candidates apart. |
 | `seed-fraction` | 0.0 | Caps the seeds at this fraction of the residues (0.25 recommended). |
@@ -135,12 +137,14 @@ How trajectories become per-residue features: which frames are read, and how eac
 |---|---|---|---|---|
 | `xtc-topology` | unset |  | topology (tpr, pdb, gro, ...) (run-specific, not in parameter files) |  |
 | `xtc` | unset | one or more | trajectory file(s), one per replica (run-specific, not in parameter files) |  |
-| `frames` | 0 |  | first N frames per replica (0 = all) |  |
-| `stride` | 1 |  | use every Nth frame of each replica |  |
+| `frames` | 0 |  | first N frames per replica (0 = all); also applied to synthetic systems (pdu bench) |  |
+| `stride` | 1 |  | use every Nth frame of each replica (then lag and highpass-window, which are in frames, must be divided by N); also applied to synthetic systems |  |
 | `rse-cutoff` | 15.0 |  | radius in angstrom of a residue's structural environment: neighbours inside it enter its descriptor |  |
-| `rse-components` | -1 |  | slow tICA components kept per residue after compressing its neighbour distances: a number >= 1, or -1 = choose it from rse-coverage (two passes over the distances) | betalactamase_incoming: 8, mdcath_incoming: 8, planted_fast: 8, synthetic100: 8, synthetic36: 8, syt_c2a_incoming: 8, t4l_incoming: 8, tutorial: 8 |
-| `rse-coverage` | 0.9 |  | with rse-components = -1: smallest number of tICA modes at which the median residue keeps this share of its kinetic variance (sum of lambda^2 over its whole spectrum); always reported in results tica_spectrum.coverage |  |
-| `rse-max-components` | 0 |  | with rse-components = -1: upper limit on the chosen number of tICA modes (0 = none); memory is frames x residues x modes x 4 bytes per feature set | workstation: 12 |
+| `rse-mode` | unset | auto, fixed | how K, the number of slow tICA modes per residue, is set: 'fixed' = rse-components; 'auto' = chosen from rse-coverage and rse-min-share (unset: auto when rse-components = -1, else fixed) |  |
+| `rse-components` | -1 |  | K with rse-mode = fixed: slow tICA modes kept per residue after compressing its neighbour distances (a number >= 1); -1 = choose it automatically (two passes over the distances) | betalactamase_incoming: 8, mdcath_incoming: 8, planted_fast: 8, synthetic100: 8, synthetic36: 8, syt_c2a_incoming: 8, t4l_incoming: 8, tutorial: 8 |
+| `rse-coverage` | 0.9 |  | automatic K, condition 1: the fewest modes at which a residue keeps this share of its kinetic variance (sum of lambda^2 over its whole spectrum); K is the median over residues; always reported in results tica_spectrum.coverage |  |
+| `rse-min-share` | 0.0 |  | automatic K, condition 2: keep only modes that each add at least this share of a residue's sum of lambda^2 (e.g. 0.03); a residue stops at whichever condition comes first, so K gets as close to rse-coverage as modes worth keeping allow (0 = condition off) |  |
+| `rse-max-components` | 0 |  | automatic K: upper limit (0 = none); memory grows with (residues x K)^2 | workstation: 12 |
 | `min-seq-sep` | 2 |  | neighbours closer than this in sequence are left out of the descriptor (trivially rigid) |  |
 | `contact-cutoff` | 8.0 |  | angstrom cutoff of the residue contact graph (growth only follows contacts) |  |
 | `pair-features` | off |  | add pair-owned contact-distance features (Stage 4) |  |
@@ -194,6 +198,8 @@ The search itself: high-pass filtering and its window scan, seeds, growth (add t
 | `skip-frames` | 0 |  | drop the first N frames of every replica |  |
 | `highpass-window` | 0 |  | remove a running mean of this many frames within every replica (0 = off; 'auto' = the smallest window whose null threshold is within --null-cal-tol of the lowest in the null calibration scan) | betalactamase_incoming: 50, mdcath_incoming: 50, syt_c2a_incoming: 100, t4l_incoming: 500, tutorial: 300, workstation: 200 |
 | `no-null-calibration` | off |  | never run the highpass-window scan, not even for highpass-window = auto (which then stops with an error) | betalactamase_incoming: 1, mdcath_incoming: 1, syt_c2a_incoming: 1, t4l_incoming: 1, tutorial: 1 |
+| `raw-feature-pass` | off |  | with a fixed highpass-window and highpass-before-features: also build the unfiltered features first (costs one extra feature pass and its memory; only the replica-overlap check uses them, on unfiltered data) |  |
+| `no-residue-affinity` | on |  | do not record every residue's affinity to every unit (residue_affinity.csv: change in nu_in, nu_out and cohesion when the residue joins or leaves each unit's core; costs about residues x units extra scores) |  |
 | `null-cal-check` | off |  | run the highpass-window scan even when the window is fixed or off, as a check (it is always run for highpass-window = auto); costs about one workspace per window tried |  |
 | `null-cal-windows` | auto |  | comma list of windows (frames) to scan; 'auto' = geometric from 10 x lag to a replica / 8 |  |
 | `null-cal-n-windows` | 6 |  | (highpass-window scan) number of windows tried |  |

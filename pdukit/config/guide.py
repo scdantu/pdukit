@@ -45,12 +45,20 @@ START_HERE = [
      "per window)."),
     ("highpass-before-features", "1 = filter the raw distances before each "
      "residue's slow modes are chosen (recommended with a high-pass window)."),
-    ("rse-components", "K, the number of slow modes (tICA) kept per residue. "
-     "-1 = choose K so the median residue keeps rse-coverage of its slow "
-     "motion.  K sets the size of the problem: memory grows with "
-     "(residues x K)^2."),
-    ("rse-max-components", "Upper limit on the K chosen automatically.  The "
-     "first setting to lower when memory is short; 8-12 fits a workstation."),
+    ("rse-mode", "How K, the number of slow modes (tICA) kept per "
+     "residue, is set: fixed (you give K in rse-components) or auto.  K sets "
+     "the size of the problem: memory grows with (residues x K)^2.  At short "
+     "lags each residue has many similar fast modes (no gap in its "
+     "spectrum), so the automatic K grows quickly as the lag shortens."),
+    ("rse-coverage", "Automatic K, condition 1: keep the fewest modes that "
+     "hold this share of a residue's slow motion (sum of lambda^2), e.g. "
+     "0.9.  K is the median over residues."),
+    ("rse-min-share", "Automatic K, condition 2: keep only modes that each "
+     "add at least this share (e.g. 0.03 = 3%).  Each residue stops at "
+     "whichever condition comes first, so K gets as close to rse-coverage "
+     "as modes worth keeping allow.  0 = off."),
+    ("rse-max-components", "Upper limit on the automatic K: a safety cap "
+     "for memory; 8-12 fits a workstation."),
     ("n-null", "Time shifts used to build the null (the 'what would chance "
      "give' reference).  64 is precise; 32 halves the memory and time of "
      "the null with slightly noisier thresholds."),

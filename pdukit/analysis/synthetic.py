@@ -74,8 +74,14 @@ class RunScore:
 class SyntheticScorer:
     """Score one synthetic run (a ``pdu bench`` output folder)."""
 
-    def __init__(self, run, n_random=1000, seed=0, null="random"):
-        """Read the run; ``null`` is 'random' or 'compact' (see module)."""
+    def __init__(self, run, n_random=1000, seed=0, null="random",
+                 truth=None):
+        """Read the run; ``null`` is 'random' or 'compact' (see module).
+
+        ``truth`` (dict, or a truth.json path) gives the planted answer of
+        an MD run on synthetic coordinates (`pdukit.bench.coords`), whose
+        results.json holds none.
+        """
         self.results = ResultsReader.load(run)
         self.name = Path(self.results.rundir).name
         self.n_random = int(n_random)
@@ -85,7 +91,11 @@ class SyntheticScorer:
         self.has_ports = ports is not None
         self.ports = ports or {"units": [], "counts": {}, "residues": []}
         self.cores = [list(map(int, u["core"])) for u in self.ports["units"]]
-        self.truth = self.results.get("truth") or {}
+        if isinstance(truth, (str, Path)):
+            import json
+
+            truth = json.loads(Path(truth).read_text())
+        self.truth = truth or self.results.get("truth") or {}
         planted = self.results.get("data", {}).get("planted") or {}
         self.design = str(planted.get("design", "planted"))
         self.dt_ns = planted.get("dt_ns", 0.1 if "design" in planted else None)
@@ -327,9 +337,13 @@ def main(argv=None):
                     help="random sets per core for the null (default 1000)")
     ap.add_argument("--compact", action="store_true",
                     help="null = compact regions on the contact graph")
+    ap.add_argument("--truth", metavar="FILE",
+                    help="truth.json of synthetic coordinates (runs made "
+                    "with pdu run on pdukit.bench.coords data)")
     a = ap.parse_args(argv)
     suite = SuiteScorer(
-        a.runs, n_random=a.n_random, null="compact" if a.compact else "random"
+        a.runs, n_random=a.n_random, null="compact" if a.compact else "random",
+        truth=a.truth,
     )
     if not suite.scores:
         print("no results.json in the given folders")

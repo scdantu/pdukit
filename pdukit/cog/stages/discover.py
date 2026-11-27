@@ -233,6 +233,7 @@ class DiscoverUnitsStage:
         }
         state.writer.write_classes(classes)
         state.timings["incoming_ports_seconds"] = time.perf_counter() - start
+        self._membership_records(state, classes, scorer)
         if args.mode_units == "extended":
             state.units = [u["extended"] for u in classes["units"]]
             log("mode recovery on extended units (core + ports)")
@@ -242,6 +243,52 @@ class DiscoverUnitsStage:
             f"{len(state.units)} terminal supports, "
             f"{sum(node['split'] for node in result['nodes'])} cuts"
         )
+
+    def _membership_records(self, state, classes, scorer):
+        """Record residue affinities and how block-like the units are."""
+        from pdukit.cog.units.affinity import residue_affinity
+        from pdukit.numerics.cohesion import blockiness
+
+        args = state.args
+        cores = [u["core"] for u in classes["units"]]
+        if not cores:
+            return
+        blk = blockiness(
+            state.rho_all, cores, n_random=200,
+            rng=np.random.default_rng(args.seed + 71),
+        )
+        state.results["blockiness"] = blk
+        log(
+            f"blockiness of {blk['n_units']} cores: within/between coupling "
+            f"{blk['ratio']:.2f}, auc {blk['auc']:.3f} (random same-size sets "
+            f"{blk['null_auc_mean']:.3f} +- {blk['null_auc_sd']:.3f}, "
+            f"z {blk['z']:.1f}, percentile {blk['percentile']:.0f})"
+        )
+        if not args.residue_affinity:
+            state.save()
+            return
+        start = time.perf_counter()
+        rows, summary = residue_affinity(state.rho_all, cores, scorer=scorer)
+        state.writer.write_affinity(rows, summary)
+        tag = "nu" if rows and "delta_nu_in" in rows[0] else "cohesion"
+        eff = [s[f"{tag}_effective_units"] for s in summary
+               if f"{tag}_effective_units" in s]
+        state.results["residue_affinity"] = {
+            "definition": "change when the residue is in rather than out of "
+            "each unit core; affinity = -delta_nu_in and delta_cohesion; "
+            "effective units = exp(entropy) of the positive affinities",
+            "files": ["residue_affinity.csv", "residue_affinity_summary.csv"],
+            "summary": summary,
+        }
+        state.timings["residue_affinity_seconds"] = (
+            time.perf_counter() - start
+        )
+        log(
+            f"residue affinity to {len(cores)} units: median effective "
+            f"units {np.median(eff):.1f} ({tag}) "
+            f"({state.timings['residue_affinity_seconds']:.0f}s)"
+        )
+        state.save()
 
     def _n_seeds(self, state):
         """Return dec-seeds, capped at seed-fraction x residues."""

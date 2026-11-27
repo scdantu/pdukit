@@ -2,15 +2,17 @@
 ; + seed-group 2, min-size 4, seed-fraction 0.25 (first-step barrier fix, tested on the synthetic suite).
 seed = 0
 frames         = 0
-stride         = 1
+stride         = 5  ; every 5th frame: 100 ps frames (decision 27 Nov); lag and window below are in strided frames
 rse-cutoff     = 15.0
 rse-components = -1  ; choose the number of tICA modes from rse-coverage (was 8)
-rse-coverage   = 0.9  ; median residue keeps 90% of its kinetic variance (sum lambda^2)
+rse-coverage   = 0.9  ; auto K, condition 1
+rse-mode       = auto
+rse-min-share  = 0.025  ; auto K, condition 2: drop modes adding < 2.5% (decision 27 Nov)
 min-seq-sep    = 2
 contact-cutoff = 8.0
 pair-features  = 0
 pair-cutoff    = 8.0
-lag        = 500  ; tau = 500 frames x 20 ps
+lag        = 100  ; tau = 100 frames x 100 ps
 unit-dim   = 8
 env-dim    = 20
 ridge      = 0.01
@@ -32,7 +34,7 @@ highpass-before-features = 1
 fit                      = 1
 calibrate-coarse         = 8
 skip-frames              = 0
-highpass-window          = 10000  ; 20 x lag, as in the Oct tau scan
+highpass-window          = 2500  ; 25 x lag: capped at replica length / 20 (27 Nov: 20 x lag lost the planted units on synthetic coordinates)
 no-null-calibration      = 1
 null-cal-windows         = auto
 null-cal-n-windows       = 6
@@ -57,7 +59,7 @@ cohesion-boot            = 100  ; was 20; tighter port guard and direction calls
 cohesion-blocks          = 20
 null-cal-tol             = 0.15
 null-cal-max-replicas    = 20
-frame-ps                 = 20.0
+frame-ps                 = 100.0
 batched                  = auto
 env-basis                = exact
 no-feature-cache         = 0

@@ -5,7 +5,8 @@
 #   bash pdukit/params/final/submit_final.sh syt            # 7 jobs
 #   DOMAINS=<list> N=<n> bash pdukit/params/final/submit_final.sh mdcath   # array over N domains
 #   TAUS="0500ps" bash pdukit/params/final/submit_final.sh t4l              # one tau only
-# Short tau (100, 200 ps) choose ~26-29 tICA modes: they get a whole node (--exclusive) and 24 h.
+# Stride 5 (100 ps frames) and rse-min-share 0.025 since 27 Nov: K ~15 at 100-200 ps (~30 GB);
+# 100 and 200 ps still get a whole node (--exclusive, 24 h) to be safe.
 set -euo pipefail
 P=pdukit/params/final
 WHAT="${1:?t4l | syt | mdcath}"

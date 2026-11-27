@@ -197,3 +197,60 @@ def test_a_shipped_preset_can_be_named_without_its_path(tmp_path,
     assert shipped_preset("nothing-like-this") == "nothing-like-this"
     cfg, _ = parse_run(["-p", "workstation", "--planted", "-o", "o"])
     assert cfg.device == "cpu" and cfg.rse_max_components == 12
+
+
+def test_auto_k_stops_at_the_first_of_coverage_and_min_share():
+    import numpy as np
+
+    from pdukit.numerics.features import (
+        modes_above_share,
+        modes_for_coverage,
+    )
+
+    flat = np.linspace(0.53, 0.2, 40)          # 100 ps-like: no gap
+    steep = np.array([0.32, 0.2, 0.14, 0.11, 0.1] + [0.02] * 35)
+    k90, _ = modes_for_coverage([flat], 0.9)
+    assert k90 > 25
+    shares = flat ** 2 / np.sum(flat ** 2)
+    assert modes_above_share(flat, 0.03) == int(np.sum(shares >= 0.03))
+    k, per = modes_for_coverage([flat], 0.9, min_share=0.03)
+    assert k == per[0] == min(k90, modes_above_share(flat, 0.03)) < k90
+    # a steep spectrum reaches the coverage before the share condition
+    assert modes_for_coverage([steep], 0.9, min_share=0.001)[0] == (
+        modes_for_coverage([steep], 0.9)[0])
+    assert modes_above_share(np.zeros(5), 0.05) == 1
+
+
+def test_rse_features_reports_the_two_conditions():
+    import numpy as np
+
+    from pdukit.numerics.features import rse_features
+
+    X = (np.random.default_rng(0).normal(size=(300, 20, 3)).cumsum(0) * 0.1
+         + np.arange(20)[None, :, None] * 3.8)
+    rep_cov, rep_both = {}, {}
+    f1, _, _ = rse_features(X, n_components=-1, report=rep_cov)
+    f2, _, _ = rse_features(X, n_components=-1, min_share=0.2,
+                            report=rep_both)
+    assert f2.shape[2] <= f1.shape[2]
+    assert rep_both["min_share"] == 0.2 and rep_both["modes_by_share"]
+    assert rep_cov["limited_by"] == "coverage"
+
+
+@pytest.mark.parametrize("sets, ok", [
+    ([("rse-mode", "fixed"), ("rse-components", "8")], True),
+    ([("rse-mode", "fixed")], False),
+    ([("rse-mode", "auto"), ("rse-components", "8")], False),
+    ([("rse-mode", "auto"), ("rse-min-share", "0.03")], True),
+    ([("rse-min-share", "1.5")], False),
+])
+def test_rse_mode_settings_are_checked(tmp_path, sets, ok):
+    from pdukit.config.config import Config
+    from pdukit.errors import ConfigError
+
+    base = [("outdir", str(tmp_path)), ("planted", "1")]
+    if ok:
+        Config.build(sets=base + sets)
+    else:
+        with pytest.raises(ConfigError):
+            Config.build(sets=base + sets)

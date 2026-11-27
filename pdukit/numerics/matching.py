@@ -46,3 +46,45 @@ def match_units(found, truth_units, *, threshold=0.67):
         "n_merged": int(merged),
         "threshold": float(threshold),
     }
+
+
+def labels_from_units(units, n_residues):
+    """Return a label per residue: unit index, or a singleton label.
+
+    Residues in no unit each get a label of their own, so agreeing on
+    "unassigned" earns nothing in `adjusted_rand`.  A residue in two units
+    keeps the first.
+    """
+    lab = np.full(int(n_residues), -1, dtype=int)
+    for k, u in enumerate(units):
+        for i in u:
+            if lab[int(i)] < 0:
+                lab[int(i)] = k
+    free = np.where(lab < 0)[0]
+    lab[free] = len(units) + np.arange(free.size)
+    return lab
+
+
+def adjusted_rand(a, b):
+    """Return the adjusted Rand index of two labelings (Hubert & Arabie).
+
+    1 = the same partition, about 0 = no more agreement than chance.
+    Defined as 1 when both partitions are all singletons or one block.
+    """
+    a, b = np.asarray(a), np.asarray(b)
+    _, ai = np.unique(a, return_inverse=True)
+    _, bi = np.unique(b, return_inverse=True)
+    table = np.zeros((ai.max() + 1, bi.max() + 1))
+    np.add.at(table, (ai, bi), 1)
+
+    def pairs(x):
+        return float(np.sum(x * (x - 1) / 2))
+
+    n = pairs(np.array([a.size]))
+    index = pairs(table)
+    rows, cols = pairs(table.sum(1)), pairs(table.sum(0))
+    expected = rows * cols / n if n else 0.0
+    top = 0.5 * (rows + cols)
+    if top == expected:
+        return 1.0
+    return (index - expected) / (top - expected)

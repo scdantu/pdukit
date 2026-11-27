@@ -91,3 +91,69 @@ def boot_sd(boot_rho, S):
 def above_null(value, sd, null_q, z=1.645):
     """Return True if value - z sd beats the null quantile (one-sided)."""
     return bool(value - z * sd > null_q)
+
+
+def blockiness(rho, units, n_random=200, rng=None):
+    """How block-like the coupling is for a set of units.
+
+    Pairs of residues that share a unit ("within") are compared with
+    pairs of assigned residues that share none ("between"), using the
+    two-way coupling (rho[i, j] + rho[j, i]) / 2:
+
+        ratio  mean within / mean between
+        auc    P(a within pair beats a between pair), ties half; 0.5 = no
+               blocks, 1 = every within pair beats every between pair
+
+    The null draws random residue sets of the same sizes (independently,
+    so overlapping units stay overlapping on average) ``n_random`` times;
+    ``z`` and ``percentile`` place the found units in that null.  A flat
+    coupling landscape gives an auc near 0.5 and a found auc inside the
+    null.
+    """
+    R = np.asarray(rho, float)
+    S2 = 0.5 * (R + R.T)
+    N = S2.shape[0]
+    rng = np.random.default_rng(0) if rng is None else rng
+
+    def score(sets):
+        member = np.zeros((len(sets), N), bool)
+        for k, s in enumerate(sets):
+            member[k, sorted({int(x) for x in s})] = True
+        assigned = member.any(0)
+        share = (member.T.astype(int) @ member.astype(int)) > 0
+        iu = np.triu_indices(N, 1)
+        both = assigned[iu[0]] & assigned[iu[1]]
+        within = share[iu] & both
+        between = ~share[iu] & both
+        w, b = S2[iu][within], S2[iu][between]
+        w, b = w[np.isfinite(w)], b[np.isfinite(b)]
+        if len(w) == 0 or len(b) == 0:
+            return float("nan"), float("nan"), float("nan"), float("nan")
+        return float(w.mean()), float(b.mean()), float(
+            w.mean() / b.mean()) if b.mean() else float("nan"), auc(w, b)
+
+    sets = [list(u) for u in units if len(u) >= 2]
+    within, between, ratio, found = score(sets)
+    sizes = [len(set(u)) for u in sets]
+    null = []
+    for _ in range(int(n_random)):
+        rand = [rng.choice(N, k, replace=False) for k in sizes]
+        null.append(score(rand)[3])
+    null = np.array([x for x in null if np.isfinite(x)])
+    sd = float(null.std(ddof=1)) if len(null) > 1 else float("nan")
+    nan = float("nan")
+    mean = float(null.mean()) if len(null) else nan
+    return {
+        "within_mean": within,
+        "between_mean": between,
+        "ratio": ratio,
+        "auc": found,
+        "null_auc_mean": mean,
+        "null_auc_sd": sd,
+        "z": float((found - mean) / sd) if sd and sd > 0 else nan,
+        "percentile": (
+            float(100 * np.mean(null < found)) if len(null) else nan
+        ),
+        "n_random": int(len(null)),
+        "n_units": len(sets),
+    }

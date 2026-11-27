@@ -30,6 +30,8 @@ EXPECTED_FILES = [
     "incoming_split.json",
     "incoming_split_units.csv",
     "incoming_ports.json",
+    "residue_affinity.csv",
+    "residue_affinity_summary.csv",
     "incoming_residue_classes.csv",
     "incoming_units_extended.csv",
     "global_mode_recovery.json",
@@ -45,6 +47,8 @@ EXPECTED_KEYS = [
     "incoming_merge",
     "incoming_split",
     "incoming_ports",
+    "blockiness",
+    "residue_affinity",
     "units_final",
     "global_mode_recovery",
 ]
